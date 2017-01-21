@@ -74,7 +74,7 @@ _RAM_BLOCK_7 EQU	_RAM_BLOCK_6+128
 SECTION "start",HOME[$0100] ; location to begin memory (< $0100 is saved for interupts)
 							; HOME is memory bank 0 
 	nop	; no operation
-	jp	.Start
+	jp	start
 	
 ; ROM Header (Macro defined in gbhw.inc)
 ; defines ROM without mapper, 32K without RAM, the basics
@@ -82,7 +82,7 @@ SECTION "start",HOME[$0100] ; location to begin memory (< $0100 is saved for int
 	ROM_HEADER ROM_NOMBC, ROM_SIZE_32KBYTE, RAM_SIZE_0KBYTE
 
 ; Our program begins
-.Start:
+start:
 	nop
 	di			; disable interupts
 	ld	sp, $ffff	; load stack pointer into highest ram location
@@ -136,7 +136,7 @@ SECTION "start",HOME[$0100] ; location to begin memory (< $0100 is saved for int
 ; RENDERING CODE
 
 ; Choose which world to show
-	ld a, currentWorld
+	ld a, [currentWorld]
 	add 0
 	jr z, .RenderLight
 
@@ -151,12 +151,12 @@ SECTION "start",HOME[$0100] ; location to begin memory (< $0100 is saved for int
 ; Render the appropriate sprites
 
 
+; Subroutines here:
+
+.RenderOthers:
 
 
 
-
-
-; SUbroutines here:
 
 ; read input pad and store the state into a
 ReadPad:
