@@ -14,7 +14,11 @@ Tile number:
 10 - door right closed
 11 - door right opened
 12 - 25 walls
+26 - gate, side, closed
+27 - gate/wall tile, closed
+28 - gate/wall, open (replace side gate with a main floor tile (27) ) 
 
-26+ - floors and window tiles
+26 - main floor tile
+27+ - floors and window tiles
 
 42 - last tile for now
