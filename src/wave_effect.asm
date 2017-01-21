@@ -413,46 +413,75 @@ UsePadAB:
 	ret
 
 MoveA:
-	ld	a, [rSCX]	; load a with x scroll value
-	inc a	; increment a
-	ld	[rSCX], a
-	and	%00000111	; check if divisible by 8
-	jp z, .IncBgLight
+;	ld	a, [rSCX]	; load a with x scroll value
+;	inc a	; increment a
+;	ld	[rSCX], a
+;	and	%00000111	; check if divisible by 8
+;	jp z, .IncBgLight
+	
+	; move screen to bottom of map
+	ld	a, 145
+	ld	[rSCY], a	; set scroll y value to 145
+	
+	; flip palettes
+	; palletes
+	ld	a, %00011011	; pallete colors, darkest to lightest
+	ld	[rBGP], a		; load colors into contents of pallete register
+	ld	[rOBP0], a		; load contents of pallete into sprite pallete
+	
+	; create another pallete for other sprites
+	ld	a, %00101111	; for Player
+	ld	[rOBP1], a		; into location 1
+	
 	
 	ret 
 
 ; increment background light vram east and west
-.IncBgLight
-	ld	a, [backgroundLightVramEast]
-	inc	a
-	ld	[backgroundDarkVramEast], a
+;.IncBgLight
+;	ld	a, [backgroundLightVramEast]
+;	inc	a
+;	ld	[backgroundDarkVramEast], a
 	
-	ld	a,	[backgroundDarkVramWest]
-	inc	a
-	ld	[backgroundDarkVramWest], a
+;	ld	a,	[backgroundDarkVramWest]
+;	inc	a
+;	ld	[backgroundDarkVramWest], a
 	
-	ret
+;	ret
 	
 MoveB:
-	ld	a, [rSCX]	; load a with screen x scroll
-	dec	a	; decrement a
-	ld	[rSCX], a
-	and	%00000111	; check if divisible by 8
-	jp z, .DecBgLight
+;	ld	a, [rSCX]	; load a with screen x scroll
+;	dec	a	; decrement a
+;	ld	[rSCX], a
+;	and	%00000111	; check if divisible by 8
+;	jp z, .DecBgLight
+	
+	; move screen to top of map
+	ld	a, 0
+	ld	[rSCY], a	; set scroll y value to 145
+	
+	; flip palettes
+	; palletes
+	ld	a, %11100100	; pallete colors, darkest to lightest
+	ld	[rBGP], a		; load colors into contents of pallete register
+	ld	[rOBP0], a		; load contents of pallete into sprite pallete
+	
+	; create another pallete for other sprites
+	ld	a, %11010000	; for Player
+	ld	[rOBP1], a		; into location 1
 	
 	ret 
 
 ; decrement background light vram east and west
-.DecBgLight
-	ld	a, [backgroundLightVramEast]
-	dec	a
-	ld	[backgroundDarkVramEast], a
+;.DecBgLight
+;	ld	a, [backgroundLightVramEast]
+;	dec	a
+;	ld	[backgroundDarkVramEast], a
 	
-	ld	a,	[backgroundDarkVramWest]
-	dec	a
-	ld	[backgroundDarkVramWest], a
+;	ld	a,	[backgroundDarkVramWest]
+;	dec	a
+;	ld	[backgroundDarkVramWest], a
 	
-	ret
+;	ret
 	
 	
 ; Spin-locks until a VBLANK
