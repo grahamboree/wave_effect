@@ -2,7 +2,4 @@ obj/
 rgbasm
 rgbfix
 rgblink
-RGBASM96.EXE
-RGBFIX96.EXE
-XLIB95.EXE
-XLINK95.EXE
+*.EXE
