@@ -90,6 +90,8 @@ playerDarkDirection 	EQU _RAM_BLOCK_1+21		;bit 0 = up/down, up = 0;  bit 1 = lef
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _RAM_BLOCK_2 EQU	_RAM_BLOCK_1+128
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _RAM_BLOCK_3 EQU	_RAM_BLOCK_2+128
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -142,6 +144,7 @@ start:
 	
 	;scroll variables
 
+	
 	call StopLCD
 	
 	; copy tiles
@@ -179,7 +182,7 @@ start:
 	
 	; erase sprite memory
 	ld		de, _OAMRAM		; Sprite attribut memory
-	ld		bc, 45*4		; 40 sprites, 4 bytes each
+	ld		bc, 46*4		; 40 sprites, 4 bytes each
 	ld		l, 0			; put everything to zero
 	call 	FillMemory		; Unused sprites remain off-screen
 	
@@ -207,16 +210,19 @@ start:
 
 ; GAMEPLAY CODE
 .GameLoop
+	call PlaySound
+	call ReadPad
+	call UsePadAB
+	call Movement
 
-.wait:
+.wait: ; wait for VBLANK
 	ld	a, [rLY]	; check scanline
-	cp	145	; compare to final scanline
+	cp	145			; compare to final scanline
 	jr	nz, .wait	; if not, loop again
-
+	
 ; End of gameplay code
 	;call WaitForVBlank
 
-	
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;TIME CRITICAL STUFF STARTS HERE - Edit at own risk!
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -229,6 +235,12 @@ start:
 	;ld	[rLCDC], a	; save changes				;4
 
 ; RENDERING CODE
+
+	; Set the sprite x,y
+	ld a, [playerLightYPixel]
+	ld [_SPR0_Y], a
+	ld a, [playerLightXPixel]
+	ld [_SPR0_X], a
 
 	; a small delay
 	ld		bc, 2000
@@ -311,7 +323,55 @@ start:
 ; Subroutines here:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-; read input pad and store the state into a
+Movement:
+	ld		a, [padInput]	; load status of pad
+	ld		b, a			; Save in b so we can reset easily
+
+	and		_PAD_RIGHT
+	call	nz, MoveRight
+	
+	ld		a, b
+	and		_PAD_LEFT
+	call	nz, MoveLeft
+	
+	ld		a, b
+	and		_PAD_UP
+	call	nz, MoveUp
+	
+	ld		a, b
+	and		_PAD_DOWN
+	call	nz, MoveDown
+	ret
+
+MoveLeft:
+	; TODO Move the screen to keep the player visible
+	ld a, [playerLightXPixel]
+	dec a
+	ld [playerLightXPixel], a
+	ret
+
+MoveRight:
+	; TODO Move the screen to keep the player visible
+	ld a, [playerLightXPixel]
+	inc a
+	ld [playerLightXPixel], a
+	ret
+
+MoveUp:
+	; TODO Move the screen to keep the player visible
+	ld a, [playerLightYPixel]
+	dec a
+	ld [playerLightYPixel], a
+	ret
+
+MoveDown:
+	; TODO Move the screen to keep the player visible
+	ld a, [playerLightYPixel]
+	inc a
+	ld [playerLightYPixel], a
+	ret
+
+; read input pad and store the state into [padInput]
 ReadPad:
 	; check the d-pad
 	ld	a, %00100000	; bit 4 to 0, 5 to 1 (Activate d-pad, not buttons)
@@ -345,7 +405,91 @@ ReadPad:
 	cpl
 	ld	[padInput], a
 	ret
+	
+; Uses Pad values to call functions
+UsePadAB:
+	ld	a, [padInput]	; load status of pad
+	and	%0000010	; A button
+	call	nz, MoveA ; if pressed, call routine move right
+	
+	ld	a, [padInput]
+	and	%00000001	; B button 
+	call	nz, MoveB ; ; if pressed, call routine move left
+	
+	ret
 
+MoveA:
+;	ld	a, [rSCX]	; load a with x scroll value
+;	inc a	; increment a
+;	ld	[rSCX], a
+;	and	%00000111	; check if divisible by 8
+;	jp z, .IncBgLight
+	
+	; move screen to bottom of map
+	ld	a, 145
+	ld	[rSCY], a	; set scroll y value to 145
+	
+	; flip palettes
+	; palletes
+	ld	a, %00011011	; pallete colors, darkest to lightest
+	ld	[rBGP], a		; load colors into contents of pallete register
+	ld	[rOBP0], a		; load contents of pallete into sprite pallete
+	
+	; create another pallete for other sprites
+	ld	a, %00101111	; for Player
+	ld	[rOBP1], a		; into location 1
+	
+	
+	ret 
+
+; increment background light vram east and west
+;.IncBgLight
+;	ld	a, [backgroundLightVramEast]
+;	inc	a
+;	ld	[backgroundDarkVramEast], a
+	
+;	ld	a,	[backgroundDarkVramWest]
+;	inc	a
+;	ld	[backgroundDarkVramWest], a
+	
+;	ret
+	
+MoveB:
+;	ld	a, [rSCX]	; load a with screen x scroll
+;	dec	a	; decrement a
+;	ld	[rSCX], a
+;	and	%00000111	; check if divisible by 8
+;	jp z, .DecBgLight
+	
+	; move screen to top of map
+	ld	a, 0
+	ld	[rSCY], a	; set scroll y value to 145
+	
+	; flip palettes
+	; palletes
+	ld	a, %11100100	; pallete colors, darkest to lightest
+	ld	[rBGP], a		; load colors into contents of pallete register
+	ld	[rOBP0], a		; load contents of pallete into sprite pallete
+	
+	; create another pallete for other sprites
+	ld	a, %11010000	; for Player
+	ld	[rOBP1], a		; into location 1
+	
+	ret 
+
+; decrement background light vram east and west
+;.DecBgLight
+;	ld	a, [backgroundLightVramEast]
+;	dec	a
+;	ld	[backgroundDarkVramEast], a
+	
+;	ld	a,	[backgroundDarkVramWest]
+;	dec	a
+;	ld	[backgroundDarkVramWest], a
+	
+;	ret
+	
+	
 ; Spin-locks until a VBLANK
 ; destroys a
 WaitForVBlank:
