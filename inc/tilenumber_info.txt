@@ -1,0 +1,20 @@
+Tile and map info:
+
+Tile number:
+0 - player standing, front
+1 - player run, front
+2 - player standing, back
+3 - player run, back
+4 - button up
+5 - button pressed
+6 - enemy 1
+7 - enemy 2
+8 - door left closed
+9 - door left opened
+10 - door right closed
+11 - door right opened
+12 - 25 walls
+
+26+ - floors and window tiles
+
+42 - last tile for now
