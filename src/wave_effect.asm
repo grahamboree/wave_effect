@@ -160,6 +160,12 @@ start:
 	ld a, 0
 	ld [soundToggle], a
 	
+	;turn on sound
+	ld	a,%10000000
+	ld	[rAUDENA],a
+	
+	call PlaySound
+	
 	; set current background offset
 	ld a, 6
 	ld [backgroundLightOffset], a
@@ -201,7 +207,7 @@ start:
 
 ; GAMEPLAY CODE
 .GameLoop
-	call PlaySound
+
 .wait:
 	ld	a, [rLY]	; check scanline
 	cp	145	; compare to final scanline
@@ -382,35 +388,37 @@ Delay:
 	ret
 
 PlaySound:
-    ld a, [rAUD1SWEEP]
-    and %10000000
-    jr nz, .EndSoundLoop
-    ld a, [soundToggle]
-    cp 0
-    jr z, .Rest
+    ld a, [rAUDENA]
+    and %00000010
+;    jr nz, .EndSoundLoop
+;    ld a, [soundToggle]
+;    cp 0
+;    jr z, .Rest
     
 .Sound
 	ld a, 0
     ld [soundToggle], a
-    ld a, %00110010
-    ld [rAUD1SWEEP], a
-    ld a, %10011111
-    ld [rAUD1LEN], a
+	
+    ld a, %10000000
+    ld [rAUD2LEN], a
+	
     ld a, %11110111
-    ld [rAUD1ENV], a
+    ld [rAUD2ENV], a
+	
     ld a, %00011110
-    ld [rAUD1LOW], a
-    ld a, %01001110
-    ld [rAUD1HIGH], a
+    ld [rAUD2LOW], a
+	
+    ld a, %10000110
+    ld [rAUD2HIGH], a
     xor a
     jr z, .EndSoundLoop
 .Rest:
 	ld a, 1
     ld [soundToggle], a
     ld a, %10000000
-    ld [rAUD1LEN], a
+    ld [rAUD2LEN], a
     ld a, %01101010
-    ld [rAUD1ENV], a
+    ld [rAUD2ENV], a
     ld a, %00001010
 .EndSoundLoop
 	ret
