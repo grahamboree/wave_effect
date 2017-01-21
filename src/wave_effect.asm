@@ -13,10 +13,8 @@ INCLUDE "gbhw.inc"
 ;**********************************************************************
 
 ;Directions for BG loadings
-_EAST_LIGHT		EQU		%00000001
-_WEST_LIGHT		EQU		%00000010
-_EAST_DARK		EQU		%00000100
-_WEST_DARK		EQU		%00001000
+_EAST		EQU		%00000001
+_WEST		EQU		%00000010
 
 ; define sprites and attributes
 
@@ -42,8 +40,12 @@ currentWorld	EQU		_RAM_BLOCK_0+1			;Which world are we in
 currentLevel	EQU		_RAM_BLOCK_0+2			;Which level are we on
 
 backgroundDrawDirection	EQU		_RAM_BLOCK_0+3			;Which direction of the background do we draw, 1 = east, 2 = west
-backgroundLightOffset	EQU		_RAM_BLOCK_0+4			;how far to the right (in tiles) is our leftmost Light bg tile?
-backgroundDarkOffset	EQU		_RAM_BLOCK_0+5			;how far to the right (in tiles) is our leftmost Dark bg tile?
+backgroundLightOffset	EQU		_RAM_BLOCK_0+4			;how far to the right (in tiles) is our leftmost Light bg tile in data
+backgroundDarkOffset	EQU		_RAM_BLOCK_0+5			;how far to the right (in tiles) is our leftmost Dark bg tile in data
+backgroundLightVramEast	EQU		_RAM_BLOCK_0+6			;where are we writing our next east tile 0-31
+backgroundLightVramWest	EQU		_RAM_BLOCK_0+7			;where are we writing our next west tile 0-31
+backgroundDarkVramEast	EQU		_RAM_BLOCK_0+8			;where are we writing our next east tile 0-31
+backgroundDarkVramWest	EQU		_RAM_BLOCK_0+9			;where are we writing our next west tile 0-31
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;BLOCK 1 is mostly for player data, including direction, animation states, sprite tile, etc.
@@ -115,8 +117,13 @@ start:
 	; copy tile maps
 	
 	; set current background offset
-	ld [backgroundLightOffset], 5
-	ld [backgroundDarkOffset], 5
+	ld a, 6
+	ld [backgroundLightOffset], a
+	ld [backgroundDarkOffset], a
+	ld a, 0
+	ld [backgroundLightVramEast], a
+	ld a, 31
+	ld [backgroundLightVramWest], a
 	
 	; copy	window tile map
 	
@@ -156,47 +163,57 @@ start:
 
 ; RENDERING CODE
 
-; Choose which world to show
-	ld a, [currentWorld]						;4
-	add 0										;2
-	jr z, .RenderLight							;3
-
-.RenderDark:
-
-
-	xor a
-	jr z, .RenderOthers
-
-.RenderLight:
-
 ; Render the appropriate sprites
 	
 .RenderOthers:
 
-	;Load the next background map
+	;NOTE: Currently only draws the light world (for simplicity)
+
+	;Check if we need to draw a new bg tile
 	ld a, [backgroundDrawDirection]
-	cp _EAST_LIGHT
-	jr z, .BackgroundEastLight
-	cp _WEST_LIGHT
-	jr z, .BackgroundWestLight
-	cp _EAST_DARK
-	jr z, .BackgroundEastDark
-	cp _WEST_DARK
-	jr z, .BackgroundWestDark
+	cp 0
+	jr z, .DoneBg
 	
-.BackgroundDone:
-	xor a
-	jr z, .
+	;load the background map into hl
+	;ld bc, BackgroundMap
 	
-.BackgroundEastLight:
+	;offset the index into Bg source if we are in dark world
+	ld a, [currentWorld]
+	jr nz, .DrawBg
+	
+	ld a, b			;1 ;dark world offset
+	add 16			;2
+	ld b, a			;1
+	
+.DrawBg
+	;check which direction we are drawing
+	ld a, [backgroundDrawDirection]
+	cp _EAST
+	jr z, .DrawEast
+.DrawWests
+	ld de, backgroundLightVramWest
+	;set the low index to offset-6
 	ld a, [backgroundLightOffset]
-
+	sub 6
+	ld c, a
+	xor a
+	jr z, .CopyBgLine
+.DrawEast
+	ld de, backgroundLightVramEast
+	;set the high index to offset+20+6
+	ld a, [backgroundLightOffset]
+	add 26
+	ld c, a
+	
+	;bc is now the correct source of our ROM data
+.CopyBgLine
+	
+	ld a, [bc]
+	ld [de], a
+	;ld de, BackgroundMemoryOffset
 	
 	
-.BackgroundWest:
-	
-
-
+.DoneBg
 ; Subroutines here:
 
 
