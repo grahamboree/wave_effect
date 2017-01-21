@@ -16,6 +16,12 @@ INCLUDE "gbhw.inc"
 _EAST		EQU		%00000001
 _WEST		EQU		%00000010
 
+; Bitflags for dpad directions
+_PAD_RIGHT		EQU		%00010000
+_PAD_LEFT		EQU		%00100000
+_PAD_UP			EQU		%01000000
+_PAD_DOWN		EQU		%10000000
+
 ; define sprites and attributes
 
 ; EXAMPLE:
@@ -26,6 +32,21 @@ _WEST		EQU		%00000010
 ;_SPR0_ATT	EQU			_OAMRAM+3	; byte for sprite atttributes
 
 ; More OAM data for sprites goes here
+
+_SPR0_Y		EQU			_OAMRAM		; Y Coord
+_SPR0_X		EQU			_OAMRAM+1	; X Coord
+_SPR0_NUM	EQU			_OAMRAM+2	; Tile number
+_SPR0_ATT	EQU			_OAMRAM+3	; Attribute flags
+
+_SPR1_Y		EQU			_OAMRAM+4	; Y Coord
+_SPR1_X		EQU			_OAMRAM+5	; X Coord
+_SPR1_NUM	EQU			_OAMRAM+6	; Tile number
+_SPR1_ATT	EQU			_OAMRAM+7	; Attribute flags
+
+_SPR2_Y		EQU			_OAMRAM+8	; Y Coord
+_SPR2_X		EQU			_OAMRAM+9	; X Coord
+_SPR2_NUM	EQU			_OAMRAM+10	; Tile number
+_SPR2_ATT	EQU			_OAMRAM+11	; Attribute flags
 
 
 ;Variables
@@ -97,7 +118,7 @@ SECTION "start",HOME[$0100] ; location to begin memory (< $0100 is saved for int
 ; Our program begins
 start:
 	nop
-	di			; disable interupts
+	di				; disable interupts
 	ld	sp, $ffff	; load stack pointer into highest ram location
 	
 
@@ -107,14 +128,31 @@ start:
 ; remember to stop LCD before copying tiles to memory
 .Init:
 	; pallet data
+
+	; palletes
+	ld	a, %11100100	; pallete colors, darkest to lightest
+	ld	[rBGP], a		; load colors into contents of pallete register
+	ld	[rOBP0], a		; load contents of pallete into sprite pallete
+	
+	; create another pallete for other sprites
+	ld	a, %11010000	; for Mario
+	ld	[rOBP1], a		; into location 1
 	
 	;scroll variables
-	
+
 	call StopLCD
 	
 	; copy tiles
+	ld		hl, Tiles			; HL loaded with sprite data
+	ld		de, _VRAM			; address for video memory into de
+	ld		bc, EndTiles-Tiles	; number of bytes to copy
+	call	CopyMemory
 	
 	; copy tile maps
+	ld		hl, Map
+	ld		de, _SCRN0		; map 0 loaction
+	ld		bc, 128*32		; 32 by 32 tiles
+	call	CopyMemory
 	
 	; set current background offset
 	ld a, 6
@@ -127,28 +165,45 @@ start:
 	
 	; copy	window tile map
 	
-	;	erase sprite memory
-	ld	de, _OAMRAM		; Sprite attribut memory
-	ld	bc, 40*4		; 40 sprites, 4 bytes each
-	ld	l, 0			; put everything to zero
-	call	FillMemory	; Unused sprites remain off-screen
+	; erase sprite memory
+	ld		de, _OAMRAM		; Sprite attribut memory
+	ld		bc, 45*4		; 40 sprites, 4 bytes each
+	ld		l, 0			; put everything to zero
+	call 	FillMemory		; Unused sprites remain off-screen
 	
-	;	create sprites
+	; create sprites
 
+	ld a, 20
+	ld [playerLightYPixel], a
+
+	ld a, 20
+	ld [playerLightXPixel], a
+
+	ld a, [playerLightYPixel]
+	ld [_SPR0_Y], a
+	ld a, [playerLightXPixel]
+	ld [_SPR0_X], a
+	ld a, 0
+	ld [_SPR0_NUM], a
+	ld a, 16 | 32
+	ld [_SPR0_ATT], a
+	
 	; configure and activate display
 	ld	a, LCDCF_ON|LCDCF_BG8000|LCDCF_BG9800|LCDCF_BGON|LCDCF_OBJ8|LCDCF_OBJON|LCDCF_WIN9C00
 	ld	[rLCDC], a
 	
-;	MAIN LOOP
 
 ; GAMEPLAY CODE
+.GameLoop
 
-
-; End of gameplay code
-.waitForVBlank:
+.wait:
 	ld	a, [rLY]	; check scanline
 	cp	145	; compare to final scanline
-	jr	nz, .waitForVBlank	; if not, loop again
+	jr	nz, .wait	; if not, loop again
+
+; End of gameplay code
+	;call WaitForVBlank
+
 	
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;TIME CRITICAL STUFF STARTS HERE - Edit at own risk!
@@ -157,16 +212,21 @@ start:
 ;1140 clock cycles to do all the drawing 
  
 	; we are in VBlank, turn off LCD
-	ld	a, [rLCDC]	; load rLCDC in a			;4
-	res	7, a	; reset bit 7 to 0 in LCD		;2
-	ld	[rLCDC], a	; save changes				;4
+	;ld	a, [rLCDC]	; load rLCDC in a			;4
+	;res	7, a	; reset bit 7 to 0 in LCD		;2
+	;ld	[rLCDC], a	; save changes				;4
 
 ; RENDERING CODE
+
+	; a small delay
+	ld		bc, 2000
+	call	Delay
+
+	jr .GameLoop
 
 ; Render the appropriate sprites
 	
 .RenderOthers:
-
 	;NOTE: Currently only draws the light world (for simplicity)
 
 	;Check if we need to draw a new bg tile
@@ -216,7 +276,27 @@ start:
 .DoneBg
 ; Subroutines here:
 
+; Choose which world to show
+	;ld a, [currentWorld]						;4
+	;add 0										;2
+	;jr z, .RenderLight							;3
 
+.RenderDark:
+	;xor a
+	;jr z, .RenderOthers
+
+.RenderLight:
+; Render the appropriate sprites
+	
+.BackgroundDone:
+	;xor a
+	;jr z, .
+	
+.BackgroundEastLight:
+	;ld a, [backgroundLightOffset]
+
+.BackgroundWest:
+	
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Subroutines here:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -256,59 +336,97 @@ ReadPad:
 	ld	[padInput], a
 	ret
 
-;Turn off the LCD
-;destroys a
+; Spin-locks until a VBLANK
+; destroys a
+WaitForVBlank:
+	ld a, [rLY]	; get the scanline number
+	cp 145		; compare to the final scanline number
+	jr nz, WaitForVBlank	; if not equal, loop again
+
+; Turn off the LCD
+; destroys a
 StopLCD:
 	ld	a,[rLCDC]
 	rlca	; rotate high bit into the carry
 	ret	nc	; the screen is already off
 
+	call WaitForVBlank
+
+	; we are in VBlank, turn off LCD
+	ld	a, [rLCDC]	; load rLCDC in a
+	res	7, a		; reset bit 7 to 0 in LCD
+	ld	[rLCDC], a	; save changes
+
+	ret
+
 ; delay routine
+; spin-locks for a specified number of iterations
 ; bc = number of iterations
-delay:
-.slow:
-	dec	bc	; decrement
-	ld	a, b	; see if zero, load b into a, check with c
+Delay:
+.Slow:
+	dec	bc ; decrement the iteration count
+
+	; Check if bc is zero
+	ld	a, b
 	or	c
-	jr	z, .fin_delay
+	jr	z, .EndDelay ; if so, we're done.
+
 	nop
-	jr	.slow
-.fin_delay:
+	jr	.Slow
+
+.EndDelay:
 	ret
 
 ; memory copy routine
 ; copy number of bytes from one directory to another
 ; expects parameters:
-; hl: copying data address
+; hl: source address
 ; de: destination address
-; bc: number of data to be copied
+; bc: number of bytes to copy
 ; destroys contents of about
 CopyMemory:
 	ld	a, [hl]	; load data to be copied in a
 	ld	[de], a	; load copied to data to new address
 	dec	bc	; moving to next copy
+
 	; check if bc is zero
 	ld	a, c
 	or	b
 	ret	z ; if zero, return
+
 	; no? continue
-	inc hl
-	inc de
-	jr	CopyMemory
+	inc hl ; Move to the next source address
+	inc de ; Move to the next destination address
+	jr CopyMemory ; loop
 	
 ; fill memory routine
 ; fill a number of bytes of memory with data
 ; expects the parameters:
 ; de: destination address
-; bc: number of data to fill
+; bc: number of bytes to fill
 ; l: data to fill
 FillMemory:
 	ld	a, 1
-	ld	[de], a	; puts data in destination
-	dec	bc	; next fill
+	ld	[de], a	; write data to destination
+	dec	bc ; decrement byte count
 	
-	ld	a, c
+	; check if bc is zero
+	ld a, c
 	or b
-	ret	z	; return if zero
-	inc	de	; keep going
-	jr	FillMemory
+	ret	z ; return if zero
+
+	inc	de ; select the next address
+	jr FillMemory ; loop
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;  SPRITE FILES ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+Tiles:
+INCLUDE "maintiles.z80"
+EndTiles:
+
+;screen size 20x17
+Map:
+INCLUDE"mainmap.z80"
+EndMap:
