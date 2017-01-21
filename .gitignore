@@ -3,3 +3,4 @@ rgbasm
 rgbfix
 rgblink
 *.EXE
+makefile
