@@ -4,3 +4,6 @@ rgbfix
 rgblink
 *.EXE
 makefile
+src/hello-noise.asm
+inc/standard-defs.inc
+inc/gbhw-snd.inc
