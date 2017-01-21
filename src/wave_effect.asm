@@ -38,17 +38,21 @@ currentLevel	EQU		_RAM_BLOCK_0+2			;Which level are we on
 ;BLOCK 1 is mostly for player data, including direction, animation states, sprite tile, etc.
 _RAM_BLOCK_1			EQU	_RAM_BLOCK_0+128
 
-playerLightX			EQU _RAM_BLOCK_1		;player x coordinate (relative to world)
-playerLightY			EQU _RAM_BLOCK_1+1		;player y coordinate (relative to world)
-playerLightFrame		EQU _RAM_BLOCK_1+2		;what frame of the animation
-playerLightDirection 	EQU _RAM_BLOCK_1+3		;bit 0 = up/down, up = 0;  bit 1 = left/right, left = 0
+playerLightXFrame		EQU _RAM_BLOCK_1		;player x coordinate (page in world)
+playerLightXPixel		EQU _RAM_BLOCK_1+1		;player x coordinate (relative to page)
+playerLightYFrame		EQU _RAM_BLOCK_1+2		;player y coordinate (page in world)
+playerLightYPixel		EQU _RAM_BLOCK_1+3		;player y coordinate (relative to world)
+playerLightFrame		EQU _RAM_BLOCK_1+4		;what frame of the animation
+playerLightDirection 	EQU _RAM_BLOCK_1+5		;bit 0 = up/down, up = 0;  bit 1 = left/right, left = 0
 
-; 4-15 are free for future player data
+; reserved for future player data
 
-playerDarkX			EQU _RAM_BLOCK_1+16			;player x coordinate (relative to world)
-playerDarkY			EQU _RAM_BLOCK_1+17			;player y coordinate (relative to world)
-playerDarkFrame		EQU _RAM_BLOCK_1+18			;what frame of the animation
-playerDarkDirection EQU _RAM_BLOCK_1+19			;bit 0 = up/down, up = 0;  bit 1 = left/right, left = 0
+playerDarkXFrame		EQU _RAM_BLOCK_1+16		;player x coordinate (page in world)
+playerDarkXPixel		EQU _RAM_BLOCK_1+17		;player x coordinate (relative to page)
+playerDarkYFrame		EQU _RAM_BLOCK_1+18		;player y coordinate (page in world)
+playerDarkYPixel		EQU _RAM_BLOCK_1+19		;player y coordinate (relative to world)
+playerDarkFrame		EQU _RAM_BLOCK_1+20		;what frame of the animation
+playerDarkDirection 	EQU _RAM_BLOCK_1+21		;bit 0 = up/down, up = 0;  bit 1 = left/right, left = 0
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _RAM_BLOCK_2 EQU	_RAM_BLOCK_1+128
@@ -62,12 +66,6 @@ _RAM_BLOCK_5 EQU	_RAM_BLOCK_4+128
 _RAM_BLOCK_6 EQU	_RAM_BLOCK_5+128
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _RAM_BLOCK_7 EQU	_RAM_BLOCK_6+128
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-_RAM_BLOCK_MUSIC EQU _RAM_BLOCK_7+128
-;BLOCK FOR MUSIC AND SOUND DATA
-;THIS BLOCK IS 2K of memory
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-_RAM_BLOCK_AFTER_MUSIC EQU _RAM_BLOCK_MUSIC+2048
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;CARTRIDGE HEADER
