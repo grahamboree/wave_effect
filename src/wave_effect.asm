@@ -102,7 +102,9 @@ _RAM_BLOCK_5 EQU	_RAM_BLOCK_4+128
 _RAM_BLOCK_6 EQU	_RAM_BLOCK_5+128
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _RAM_BLOCK_7 EQU	_RAM_BLOCK_6+128
+soundToggle EQU _RAM_BLOCK_7
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 
 ;CARTRIDGE HEADER
 ;**********************************************************************
@@ -156,6 +158,10 @@ start:
 	ld		de, _SCRN0		; map 0 loaction
 	ld		bc, 128*32		; 32 by 32 tiles
 	call	CopyMemory
+
+	; sound
+	ld a, 0
+	ld [soundToggle], a
 	
 	; set current background offset
 	ld a, 6
@@ -198,7 +204,7 @@ start:
 
 ; GAMEPLAY CODE
 .GameLoop
-
+	call PlaySound
 .wait:
 	ld	a, [rLY]	; check scanline
 	cp	145	; compare to final scanline
@@ -232,15 +238,24 @@ start:
 ; Render the appropriate sprites
 	
 .RenderOthers:
-	;NOTE: Currently only draws the light world (for simplicity)
 
+	;NOTE: Currently only draws the light world (for simplicity)
+	
+	;DE = 32, so we can iterate our background output targets
+	ld d, 0
+	ld e, 32
+	
+	;store the counter to the stack
+	ld a, 16
+	push af
+	
 	;Check if we need to draw a new bg tile
 	ld a, [backgroundDrawDirection]
 	cp 0
 	jr z, .DoneBg
 	
 	;load the background map into hl
-	;ld bc, BackgroundMap
+	ld bc, Map
 	
 	;offset the index into Bg source if we are in dark world
 	ld a, [currentWorld]
@@ -250,58 +265,47 @@ start:
 	add 16			;2
 	ld b, a			;1
 	
-.DrawBg
+.DrawBg:
 	;check which direction we are drawing
 	ld a, [backgroundDrawDirection]
 	cp _EAST
 	jr z, .DrawEast
-.DrawWests
-	ld de, backgroundLightVramWest
+.DrawWests:
+	;get the destination in vram
+	ld hl, backgroundLightVramWest
 	;set the low index to offset-6
 	ld a, [backgroundLightOffset]
 	sub 6
 	ld c, a
 	xor a
 	jr z, .CopyBgLine
-.DrawEast
-	ld de, backgroundLightVramEast
+.DrawEast:
+	;get the destination in vram
+	ld hl, backgroundLightVramEast
 	;set the high index to offset+20+6
 	ld a, [backgroundLightOffset]
 	add 26
 	ld c, a
 	
 	;bc is now the correct source of our ROM data
-.CopyBgLine
+	;hl is the correct destination of our VRAM
+.CopyBgLine:
 	
 	ld a, [bc]
-	ld [de], a
-	;ld de, BackgroundMemoryOffset
+	ld [hl], a
+	add hl, de		;add 32 to the RAM destination
+	inc b			;increment the ROM source
 	
+	pop af
+	dec a
+	jr z, .DoneBg
+	push af
+	jr nz, .CopyBgLine
 	
 .DoneBg
 ; Subroutines here:
 
-; Choose which world to show
-	;ld a, [currentWorld]						;4
-	;add 0										;2
-	;jr z, .RenderLight							;3
 
-.RenderDark:
-	;xor a
-	;jr z, .RenderOthers
-
-.RenderLight:
-; Render the appropriate sprites
-	
-.BackgroundDone:
-	;xor a
-	;jr z, .
-	
-.BackgroundEastLight:
-	;ld a, [backgroundLightOffset]
-
-.BackgroundWest:
-	
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Subroutines here:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -435,6 +439,40 @@ Delay:
 	jr	.Slow
 
 .EndDelay:
+	ret
+
+PlaySound:
+    ld a, [rAUD1SWEEP]
+    and %10000000
+    jr nz, .EndSoundLoop
+    ld a, [soundToggle]
+    cp 0
+    jr z, .Rest
+    
+.Sound
+	ld a, 0
+    ld [soundToggle], a
+    ld a, %00110010
+    ld [rAUD1SWEEP], a
+    ld a, %10011111
+    ld [rAUD1LEN], a
+    ld a, %11110111
+    ld [rAUD1ENV], a
+    ld a, %00011110
+    ld [rAUD1LOW], a
+    ld a, %01001110
+    ld [rAUD1HIGH], a
+    xor a
+    jr z, .EndSoundLoop
+.Rest:
+	ld a, 1
+    ld [soundToggle], a
+    ld a, %10000000
+    ld [rAUD1LEN], a
+    ld a, %01101010
+    ld [rAUD1ENV], a
+    ld a, %00001010
+.EndSoundLoop
 	ret
 
 ; memory copy routine
