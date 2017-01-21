@@ -11,6 +11,13 @@ INCLUDE "gbhw.inc"
 
 ;Constants
 ;**********************************************************************
+
+;Directions for BG loadings
+_EAST_LIGHT		EQU		%00000001
+_WEST_LIGHT		EQU		%00000010
+_EAST_DARK		EQU		%00000100
+_WEST_DARK		EQU		%00001000
+
 ; define sprites and attributes
 
 ; EXAMPLE:
@@ -33,6 +40,10 @@ _RAM_BLOCK_0	EQU		_RAM					;RAM is 8K without bank switching
 padInput		EQU		_RAM_BLOCK_0			;The input from the d-pad and buttons
 currentWorld	EQU		_RAM_BLOCK_0+1			;Which world are we in
 currentLevel	EQU		_RAM_BLOCK_0+2			;Which level are we on
+
+backgroundDrawDirection	EQU		_RAM_BLOCK_0+3			;Which direction of the background do we draw, 1 = east, 2 = west
+backgroundLightOffset	EQU		_RAM_BLOCK_0+4			;how far to the right (in tiles) is our leftmost Light bg tile?
+backgroundDarkOffset	EQU		_RAM_BLOCK_0+5			;how far to the right (in tiles) is our leftmost Dark bg tile?
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;BLOCK 1 is mostly for player data, including direction, animation states, sprite tile, etc.
@@ -103,6 +114,10 @@ start:
 	
 	; copy tile maps
 	
+	; set current background offset
+	ld [backgroundLightOffset], 5
+	ld [backgroundDarkOffset], 5
+	
 	; copy	window tile map
 	
 	;	erase sprite memory
@@ -142,9 +157,9 @@ start:
 ; RENDERING CODE
 
 ; Choose which world to show
-	ld a, [currentWorld]
-	add 0
-	jr z, .RenderLight
+	ld a, [currentWorld]						;4
+	add 0										;2
+	jr z, .RenderLight							;3
 
 .RenderDark:
 
@@ -157,6 +172,30 @@ start:
 ; Render the appropriate sprites
 	
 .RenderOthers:
+
+	;Load the next background map
+	ld a, [backgroundDrawDirection]
+	cp _EAST_LIGHT
+	jr z, .BackgroundEastLight
+	cp _WEST_LIGHT
+	jr z, .BackgroundWestLight
+	cp _EAST_DARK
+	jr z, .BackgroundEastDark
+	cp _WEST_DARK
+	jr z, .BackgroundWestDark
+	
+.BackgroundDone:
+	xor a
+	jr z, .
+	
+.BackgroundEastLight:
+	ld a, [backgroundLightOffset]
+
+	
+	
+.BackgroundWest:
+	
+
 
 ; Subroutines here:
 
