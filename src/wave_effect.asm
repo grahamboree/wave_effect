@@ -142,7 +142,7 @@ start:
 ; RENDERING CODE
 
 ; Choose which world to show
-	ld a, currentWorld
+	ld a, [currentWorld]
 	add 0
 	jr z, .RenderLight
 
@@ -156,10 +156,9 @@ start:
 
 ; Render the appropriate sprites
 	
+.RenderOthers:
 
-
-
-
+; Subroutines here:
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
