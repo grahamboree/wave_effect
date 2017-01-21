@@ -134,12 +134,14 @@ start:
 	; pallet data
 
 	; palletes
-	ld	a, %11100100	; pallete colors, darkest to lightest
+	ld	a, %11100100
+	;ld	a, %11100100	; pallete colors, darkest to lightest
 	ld	[rBGP], a		; load colors into contents of pallete register
 	ld	[rOBP0], a		; load contents of pallete into sprite pallete
 	
 	; create another pallete for other sprites
-	ld	a, %11010000	; for Mario
+	;ld	a, %11010000	; for Mario
+	ld	a, %11100100
 	ld	[rOBP1], a		; into location 1
 	
 	;scroll variables
@@ -423,6 +425,7 @@ MoveA:
 	ld	a, 145
 	ld	[rSCY], a	; set scroll y value to 145
 	
+	
 	; flip palettes
 	; palletes
 	ld	a, %00011011	; pallete colors, darkest to lightest
@@ -430,9 +433,8 @@ MoveA:
 	ld	[rOBP0], a		; load contents of pallete into sprite pallete
 	
 	; create another pallete for other sprites
-	ld	a, %00101111	; for Player
+	ld	a, %00011011	; for Player
 	ld	[rOBP1], a		; into location 1
-	
 	
 	ret 
 
@@ -466,9 +468,8 @@ MoveB:
 	ld	[rOBP0], a		; load contents of pallete into sprite pallete
 	
 	; create another pallete for other sprites
-	ld	a, %11010000	; for Player
+	ld	a, %11100100	; for Player
 	ld	[rOBP1], a		; into location 1
-	
 	ret 
 
 ; decrement background light vram east and west
