@@ -205,17 +205,18 @@ start:
 ; GAMEPLAY CODE
 .GameLoop
 	call PlaySound
-.wait:
-	ld	a, [rLY]	; check scanline
-	cp	145	; compare to final scanline
-	jr	nz, .wait	; if not, loop again
-	
 	call ReadPad
 	call UsePadAB
+	call Movement
+
+.wait: ; wait for VBLANK
+	ld	a, [rLY]	; check scanline
+	cp	145			; compare to final scanline
+	jr	nz, .wait	; if not, loop again
+	
 ; End of gameplay code
 	;call WaitForVBlank
 
-	
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;TIME CRITICAL STUFF STARTS HERE - Edit at own risk!
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -228,6 +229,12 @@ start:
 	;ld	[rLCDC], a	; save changes				;4
 
 ; RENDERING CODE
+
+	; Set the sprite x,y
+	ld a, [playerLightYPixel]
+	ld [_SPR0_Y], a
+	ld a, [playerLightXPixel]
+	ld [_SPR0_X], a
 
 	; a small delay
 	ld		bc, 2000
@@ -310,7 +317,55 @@ start:
 ; Subroutines here:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-; read input pad and store the state into a
+Movement:
+	ld		a, [padInput]	; load status of pad
+	ld		b, a			; Save in b so we can reset easily
+
+	and		_PAD_RIGHT
+	call	nz, MoveRight
+	
+	ld		a, b
+	and		_PAD_LEFT
+	call	nz, MoveLeft
+	
+	ld		a, b
+	and		_PAD_UP
+	call	nz, MoveUp
+	
+	ld		a, b
+	and		_PAD_DOWN
+	call	nz, MoveDown
+	ret
+
+MoveLeft:
+	; TODO Move the screen to keep the player visible
+	ld a, [playerLightXPixel]
+	dec a
+	ld [playerLightXPixel], a
+	ret
+
+MoveRight:
+	; TODO Move the screen to keep the player visible
+	ld a, [playerLightXPixel]
+	inc a
+	ld [playerLightXPixel], a
+	ret
+
+MoveUp:
+	; TODO Move the screen to keep the player visible
+	ld a, [playerLightYPixel]
+	dec a
+	ld [playerLightYPixel], a
+	ret
+
+MoveDown:
+	; TODO Move the screen to keep the player visible
+	ld a, [playerLightYPixel]
+	inc a
+	ld [playerLightYPixel], a
+	ret
+
+; read input pad and store the state into [padInput]
 ReadPad:
 	; check the d-pad
 	ld	a, %00100000	; bit 4 to 0, 5 to 1 (Activate d-pad, not buttons)
