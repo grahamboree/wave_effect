@@ -205,6 +205,17 @@ init:
 	ld	a, %00110000
 	ld	[_SPR4_ATT], a	; special attribute, pallet 1
 	
+	ld a,0
+	ld [rNR10], a
+	ld a, $80
+	ld [rNR11], a
+	ld a, $F0
+	ld [rNR12], a
+	ld a, $D7
+	ld [rNR13], a
+	ld a, $86
+	ld [rNR14], a
+	
 	; configure and activate display
 	ld	a, LCDCF_ON|LCDCF_BG8000|LCDCF_BG9800|LCDCF_BGON|LCDCF_OBJ8|LCDCF_OBJON|LCDCF_WIN9C00
 	ld	[rLCDC], a
