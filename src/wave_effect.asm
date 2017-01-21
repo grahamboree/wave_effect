@@ -28,7 +28,7 @@ INCLUDE "gbhw.inc"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;BLOCK 0 is mostly for global data like buttons and world state
-_RAM_BLOCK_0 EQU	_RAM						;RAM is 8K without bank switching
+_RAM_BLOCK_0	EQU		_RAM					;RAM is 8K without bank switching
 
 padInput		EQU		_RAM_BLOCK_0			;The input from the d-pad and buttons
 currentWorld	EQU		_RAM_BLOCK_0+1			;Which world are we in
@@ -41,7 +41,7 @@ _RAM_BLOCK_1			EQU	_RAM_BLOCK_0+128
 playerLightXFrame		EQU _RAM_BLOCK_1		;player x coordinate (page in world)
 playerLightXPixel		EQU _RAM_BLOCK_1+1		;player x coordinate (relative to page)
 playerLightYFrame		EQU _RAM_BLOCK_1+2		;player y coordinate (page in world)
-playerLightYPixel		EQU _RAM_BLOCK_1+3		;player y coordinate (relative to world)
+playerLightYPixel		EQU _RAM_BLOCK_1+3		;player y coordinate (relative to page)
 playerLightFrame		EQU _RAM_BLOCK_1+4		;what frame of the animation
 playerLightDirection 	EQU _RAM_BLOCK_1+5		;bit 0 = up/down, up = 0;  bit 1 = left/right, left = 0
 
@@ -50,8 +50,8 @@ playerLightDirection 	EQU _RAM_BLOCK_1+5		;bit 0 = up/down, up = 0;  bit 1 = lef
 playerDarkXFrame		EQU _RAM_BLOCK_1+16		;player x coordinate (page in world)
 playerDarkXPixel		EQU _RAM_BLOCK_1+17		;player x coordinate (relative to page)
 playerDarkYFrame		EQU _RAM_BLOCK_1+18		;player y coordinate (page in world)
-playerDarkYPixel		EQU _RAM_BLOCK_1+19		;player y coordinate (relative to world)
-playerDarkFrame		EQU _RAM_BLOCK_1+20		;what frame of the animation
+playerDarkYPixel		EQU _RAM_BLOCK_1+19		;player y coordinate (relative to page)
+playerDarkFrame			EQU _RAM_BLOCK_1+20		;what frame of the animation
 playerDarkDirection 	EQU _RAM_BLOCK_1+21		;bit 0 = up/down, up = 0;  bit 1 = left/right, left = 0
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -74,7 +74,7 @@ _RAM_BLOCK_7 EQU	_RAM_BLOCK_6+128
 SECTION "start",HOME[$0100] ; location to begin memory (< $0100 is saved for interupts)
 							; HOME is memory bank 0 
 	nop	; no operation
-	jp	.Start
+	jp	start
 	
 ; ROM Header (Macro defined in gbhw.inc)
 ; defines ROM without mapper, 32K without RAM, the basics
@@ -82,7 +82,7 @@ SECTION "start",HOME[$0100] ; location to begin memory (< $0100 is saved for int
 	ROM_HEADER ROM_NOMBC, ROM_SIZE_32KBYTE, RAM_SIZE_0KBYTE
 
 ; Our program begins
-.Start:
+start:
 	nop
 	di			; disable interupts
 	ld	sp, $ffff	; load stack pointer into highest ram location
@@ -128,10 +128,16 @@ SECTION "start",HOME[$0100] ; location to begin memory (< $0100 is saved for int
 	cp	145	; compare to final scanline
 	jr	nz, .waitForVBlank	; if not, loop again
 	
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;TIME CRITICAL STUFF STARTS HERE - Edit at own risk!
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+ 
+;1140 clock cycles to do all the drawing 
+ 
 	; we are in VBlank, turn off LCD
-	ld	a, [rLCDC]	; load rLCDC in a
-	res	7, a	; reset bit 7 to 0 in LCD
-	ld	[rLCDC], a	; save changes
+	ld	a, [rLCDC]	; load rLCDC in a			;4
+	res	7, a	; reset bit 7 to 0 in LCD		;2
+	ld	[rLCDC], a	; save changes				;4
 
 ; RENDERING CODE
 
@@ -149,14 +155,16 @@ SECTION "start",HOME[$0100] ; location to begin memory (< $0100 is saved for int
 .RenderLight:
 
 ; Render the appropriate sprites
+	
 
 
 
 
 
 
-
-; SUbroutines here:
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Subroutines here:
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ; read input pad and store the state into a
 ReadPad:
