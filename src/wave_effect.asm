@@ -100,7 +100,9 @@ _RAM_BLOCK_5 EQU	_RAM_BLOCK_4+128
 _RAM_BLOCK_6 EQU	_RAM_BLOCK_5+128
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _RAM_BLOCK_7 EQU	_RAM_BLOCK_6+128
+soundToggle EQU _RAM_BLOCK_7
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 
 ;CARTRIDGE HEADER
 ;**********************************************************************
@@ -153,6 +155,10 @@ start:
 	ld		de, _SCRN0		; map 0 loaction
 	ld		bc, 128*32		; 32 by 32 tiles
 	call	CopyMemory
+
+	; sound
+	ld a, 0
+	ld [soundToggle], a
 	
 	; set current background offset
 	ld a, 6
@@ -195,7 +201,7 @@ start:
 
 ; GAMEPLAY CODE
 .GameLoop
-
+	call PlaySound
 .wait:
 	ld	a, [rLY]	; check scanline
 	cp	145	; compare to final scanline
@@ -375,6 +381,40 @@ Delay:
 	jr	.Slow
 
 .EndDelay:
+	ret
+
+PlaySound:
+    ld a, [rAUD1SWEEP]
+    and %10000000
+    jr nz, .EndSoundLoop
+    ld a, [soundToggle]
+    cp 0
+    jr z, .Rest
+    
+.Sound
+	ld a, 0
+    ld [soundToggle], a
+    ld a, %00110010
+    ld [rAUD1SWEEP], a
+    ld a, %10011111
+    ld [rAUD1LEN], a
+    ld a, %11110111
+    ld [rAUD1ENV], a
+    ld a, %00011110
+    ld [rAUD1LOW], a
+    ld a, %01001110
+    ld [rAUD1HIGH], a
+    xor a
+    jr z, .EndSoundLoop
+.Rest:
+	ld a, 1
+    ld [soundToggle], a
+    ld a, %10000000
+    ld [rAUD1LEN], a
+    ld a, %01101010
+    ld [rAUD1ENV], a
+    ld a, %00001010
+.EndSoundLoop
 	ret
 
 ; memory copy routine
