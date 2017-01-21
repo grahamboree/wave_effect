@@ -90,6 +90,8 @@ playerDarkDirection 	EQU _RAM_BLOCK_1+21		;bit 0 = up/down, up = 0;  bit 1 = lef
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _RAM_BLOCK_2 EQU	_RAM_BLOCK_1+128
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _RAM_BLOCK_3 EQU	_RAM_BLOCK_2+128
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -140,6 +142,7 @@ start:
 	
 	;scroll variables
 
+	
 	call StopLCD
 	
 	; copy tiles
@@ -167,7 +170,7 @@ start:
 	
 	; erase sprite memory
 	ld		de, _OAMRAM		; Sprite attribut memory
-	ld		bc, 45*4		; 40 sprites, 4 bytes each
+	ld		bc, 46*4		; 40 sprites, 4 bytes each
 	ld		l, 0			; put everything to zero
 	call 	FillMemory		; Unused sprites remain off-screen
 	
@@ -200,7 +203,9 @@ start:
 	ld	a, [rLY]	; check scanline
 	cp	145	; compare to final scanline
 	jr	nz, .wait	; if not, loop again
-
+	
+	call ReadPad
+	call UsePadAB
 ; End of gameplay code
 	;call WaitForVBlank
 
@@ -335,7 +340,62 @@ ReadPad:
 	cpl
 	ld	[padInput], a
 	ret
+	
+; Uses Pad values to call functions
+UsePadAB:
+	ld	a, [padInput]	; load status of pad
+	and	%0000010	; A button
+	call	nz, MoveA ; if pressed, call routine move right
+	
+	ld	a, [padInput]
+	and	%00000001	; B button 
+	call	nz, MoveB ; ; if pressed, call routine move left
+	
+	ret
 
+MoveA:
+	ld	a, [rSCX]	; load a with x scroll value
+	inc a	; increment a
+	ld	[rSCX], a
+	and	%00000111	; check if divisible by 8
+	jp z, .IncBgLight
+	
+	ret 
+
+; increment background light vram east and west
+.IncBgLight
+	ld	a, [backgroundLightVramEast]
+	inc	a
+	ld	[backgroundDarkVramEast], a
+	
+	ld	a,	[backgroundDarkVramWest]
+	inc	a
+	ld	[backgroundDarkVramWest], a
+	
+	ret
+	
+MoveB:
+	ld	a, [rSCX]	; load a with screen x scroll
+	dec	a	; decrement a
+	ld	[rSCX], a
+	and	%00000111	; check if divisible by 8
+	jp z, .DecBgLight
+	
+	ret 
+
+; decrement background light vram east and west
+.DecBgLight
+	ld	a, [backgroundLightVramEast]
+	dec	a
+	ld	[backgroundDarkVramEast], a
+	
+	ld	a,	[backgroundDarkVramWest]
+	dec	a
+	ld	[backgroundDarkVramWest], a
+	
+	ret
+	
+	
 ; Spin-locks until a VBLANK
 ; destroys a
 WaitForVBlank:
