@@ -448,28 +448,44 @@ Movement:
 	ret
 
 MoveLeft:
-	; TODO Move the screen to keep the player visible
-	ld a, [playerLightXPixel]
-	dec a
-	ld [playerLightXPixel], a
-
 	; Set the direction flag bit
 	ld		a, [playerLightDirection]
 	or		%00000010
 	ld		[playerLightDirection], a
+	
+	;Check if we should move the screen 
+	ld a, [playerLightXPixel]
+	cp 32
+	jp z, .LeftScreen
+.LeftPlayer
+	;Change player position
+	dec a
+	ld [playerLightXPixel], a
 
+	ret
+.LeftScreen
+	;Change screen position, load data if necessary
+	call ScrollLeft
 	ret
 
 MoveRight:
-	; TODO Move the screen to keep the player visible
-	ld		a, [playerLightXPixel]
-	inc		a
-	ld		[playerLightXPixel], a
-
+	;direction
 	ld		a, [playerLightDirection]
 	and		%11111101
 	ld		[playerLightDirection], a
-
+	
+	;check for move edge
+	ld		a, [playerLightXPixel]
+	cp a, 121
+	jp z, .RightScreen
+.RightPlayer
+	;update player position
+	inc		a
+	ld		[playerLightXPixel], a
+	ret
+.RightScreen
+	;move scroll, load bg if necessary
+	call ScrollRight
 	ret
 
 MoveUp:
@@ -571,16 +587,16 @@ UsePadAB:
 	ld	a, [padInput]	; load status of pad
 	and	%0000010	; A button
 	call	nz, MoveA ; if pressed, call routine move right
-	;call	nz, LoadRight
+	;call	nz, ScrollRight
 	
 	ld	a, [padInput]
 	and	%00000001	; B button 
 	call	nz, MoveB ; ; if pressed, call routine move left
-	;call	nz, LoadLeft
+	;call	nz, ScrollLeft
 	
 	ret
 
-LoadRight:
+ScrollRight:
 	ld	a, [rSCX]	; load a with x scroll value
 	inc a	; increment a
 	ld	[rSCX], a
@@ -619,7 +635,7 @@ LoadRight:
 	
 	ret
 
-LoadLeft:
+ScrollLeft:
 	ld	a, [rSCX]	; load a with screen x scroll
 	dec	a	; decrement a
 	ld	[rSCX], a
