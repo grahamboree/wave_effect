@@ -79,23 +79,20 @@ darkScrollX				EQU		_RAM_BLOCK_0+11
 ;BLOCK 1 is mostly for player data, including direction, animation states, sprite tile, etc.
 _RAM_BLOCK_1			EQU	_RAM_BLOCK_0+128
 
-playerLightXFrame		EQU _RAM_BLOCK_1		; player x coordinate (page in world)
 playerLightXPixel		EQU _RAM_BLOCK_1+1		; player x coordinate (relative to page)
-playerLightYFrame		EQU _RAM_BLOCK_1+2		; player y coordinate (page in world)
+playerDarkXPixel		EQU _RAM_BLOCK_1+2		; player x coordinate (relative to page)
+
 playerLightYPixel		EQU _RAM_BLOCK_1+3		; player y coordinate (relative to page)
-playerLightFrame		EQU _RAM_BLOCK_1+4		; what frame of the animation
-playerLightDirection 	EQU _RAM_BLOCK_1+5		; bit 0 = up/down, up = 1;  bit 1 = left/right, left = 1
-playerLightSpriteNumber	EQU	_RAM_BLOCK_1+6		; which sprite number is used to render the player
+playerDarkYPixel		EQU _RAM_BLOCK_1+4		; player y coordinate (relative to page)
 
-; reserved for future player data
+playerLightFrame		EQU _RAM_BLOCK_1+5		; what frame of the animation
+playerDarkFrame			EQU _RAM_BLOCK_1+6		; what frame of the animation
 
-playerDarkXFrame		EQU _RAM_BLOCK_1+16		; player x coordinate (page in world)
-playerDarkXPixel		EQU _RAM_BLOCK_1+17		; player x coordinate (relative to page)
-playerDarkYFrame		EQU _RAM_BLOCK_1+18		; player y coordinate (page in world)
-playerDarkYPixel		EQU _RAM_BLOCK_1+19		; player y coordinate (relative to page)
-playerDarkFrame			EQU _RAM_BLOCK_1+20		; what frame of the animation
-playerDarkDirection 	EQU _RAM_BLOCK_1+21		; bit 0 = up/down, up = 1;  bit 1 = left/right, left = 1
-playerDarkSpriteNumber	EQU	_RAM_BLOCK_1+22		; which sprite number is used to render the player
+playerLightDirection 	EQU _RAM_BLOCK_1+7		; bit 0 = up/down, up = 1;  bit 1 = left/right, left = 1
+playerDarkDirection 	EQU _RAM_BLOCK_1+8		; bit 0 = up/down, up = 1;  bit 1 = left/right, left = 1
+
+playerLightSpriteNumber	EQU	_RAM_BLOCK_1+9		; which sprite number is used to render the player
+playerDarkSpriteNumber	EQU	_RAM_BLOCK_1+10		; which sprite number is used to render the player
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _RAM_BLOCK_2 EQU	_RAM_BLOCK_1+128
@@ -311,18 +308,22 @@ start:
 	
 	;load the background map into bc
 	ld bc, MAIN_MAP
+	ld de, _SCRN0
 	
 	;offset the index into Bg source if we are in dark world
 	ld a, [currentWorld]
-	jr nz, .DrawBg
+	cp 0
+	jr z, .DrawBg
 	
 	ld a, b			;1 ;dark world offset
-	add 16			;2
+	add 8			;2
 	ld b, a			;1
 	
+	ld a, d			
+	add 2
+	ld d, a
+	
 .DrawBg:
-	ld de, _SCRN0
-	ld h, 0
 	;check which direction we are drawing
 	ld a, [backgroundDrawDirection]
 	cp _EAST
@@ -331,6 +332,7 @@ start:
 	;get the destination in vram
 	ld hl, backgroundLightVramWest
 	call WorldShift
+	ld h, 0
 	ld l, a
 	add hl,de
 	push hl
@@ -397,32 +399,37 @@ start:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 RenderPlayer:
-	ld a, [playerLightYPixel]
+	ld hl, playerLightYPixel
+	call WorldShift
 	ld [_SPR0_Y], a
-	ld a, [playerLightXPixel]
+	ld hl,playerLightXPixel
+	call WorldShift
 	ld [_SPR0_X], a
 
-	ld 		a, [playerLightDirection] ; has bit 1 set for left/right.  1 is left 
+	ld 		hl, playerLightDirection ; has bit 1 set for left/right.  1 is left
+	call WorldShift
 	and		%00000001	; mask out the y-direction bit
 	sla		a
 	ld		b, a
 
-	ld 		a, [playerLightSpriteNumber]
+	ld 		hl, playerLightSpriteNumber
+	call WorldShift
 	add 	a, b
 	ld 		[_SPR0_NUM], a
 
 	; byte 3 bit 5 for x-swap
-	ld 		a, [playerLightDirection] ; has bit 1 set for left/right.  1 is left 
+	ld 		hl, playerLightDirection ; has bit 1 set for left/right.  1 is left
+	call WorldShift
 	and		%00000010	; mask out the x-direction bit
 	swap	a			; swap nibbles (puts the x direction value in the x-flip attribute bit location)
 	or		16			; additional flags
 	ld [_SPR0_ATT], a	; set the attributes
 
 	; Reset the up/down flag so the player doesn't stay facing up
-	ld		a, [playerLightDirection]
+	ld		hl, playerLightDirection
+	call WorldShift
 	and		%11111110	; Clear the up bit		
-	ld		[playerLightDirection], a
-
+	ld		[hl], a
 
 	ret
 
@@ -432,28 +439,34 @@ AnimatePlayer:
 	cp 0
 	jr z, .reset_anim
 
-	ld	a, [playerLightFrame]	; load anim speed var into a
+	ld	hl, playerLightFrame	; load anim speed var into a
+	call WorldShift
 	dec	a						; decrement
-	ld	[playerLightFrame], a	; save value
+	ld	[hl], a					; save value
 	cp	0						; is it 0 yet?
 	ret	nz						; if it is not, return (this is the delay)
 
 	ld	a, _PLAYER_ANIM_SPEED	; reset when 0
-	ld	[playerLightFrame], a	; save original value
+	ld	[hl], a	; save original value
 	
 	; change the sprite
-	ld	a, [playerLightSpriteNumber]	; load tile number
-	inc	a	; increment
-	ld	[playerLightSpriteNumber], a	; save tile number
-	cp	2	; check to see if it's over
-	ret	nz	; if not, return
+	ld	hl, playerLightSpriteNumber	; load tile number
+	call WorldShift
+	inc	a		; increment
+	ld	[hl], a	; save tile number
+	cp	2		; check to see if it's over
+	ret	nz		; if not, return
 	
 .reset_anim
+	ld hl, playerLightFrame
+	call WorldShift
 	ld	a, _PLAYER_ANIM_SPEED	; reset when 0
-	ld	[playerLightFrame], a	; save original value
+	ld	[hl], a	; save original value
 
+	ld hl, playerLightSpriteNumber
+	call WorldShift
 	ld	a, 0	; retart aniamtion loop
-	ld	[playerLightSpriteNumber], a	; save sprite
+	ld	[hl], a	; save sprite
 	ret
 
 Movement:
@@ -478,18 +491,20 @@ Movement:
 
 MoveLeft:
 	; Set the direction flag bit
-	ld		a, [playerLightDirection]
+	ld		hl, playerLightDirection
+	call WorldShift
 	or		%00000010
-	ld		[playerLightDirection], a
+	ld		[hl], a
 	
 	;Check if we should move the screen 
-	ld a, [playerLightXPixel]
+	ld hl, playerLightXPixel
+	call WorldShift
 	cp 32
 	jp z, .LeftScreen
 .LeftPlayer
 	;Change player position
 	dec a
-	ld [playerLightXPixel], a
+	ld [hl], a
 
 	ret
 .LeftScreen
@@ -499,18 +514,20 @@ MoveLeft:
 
 MoveRight:
 	;direction
-	ld		a, [playerLightDirection]
+	ld		hl, playerLightDirection
+	call WorldShift
 	and		%11111101
-	ld		[playerLightDirection], a
+	ld		[hl], a
 	
 	;check for move edge
-	ld		a, [playerLightXPixel]
+	ld		hl, playerLightXPixel
+	call WorldShift
 	cp a, 121
 	jp z, .RightScreen
 .RightPlayer
 	;update player position
 	inc		a
-	ld		[playerLightXPixel], a
+	ld		[hl], a
 	ret
 .RightScreen
 	;move scroll, load bg if necessary
@@ -519,25 +536,28 @@ MoveRight:
 
 MoveUp:
 	; TODO Move the screen to keep the player visible
-	ld a, [playerLightYPixel]
+	ld hl, playerLightYPixel
+	call WorldShift
 	dec a
-	ld [playerLightYPixel], a
+	ld [hl], a
 
-	ld		a, [playerLightDirection]
+	ld		hl, playerLightDirection
+	call WorldShift
 	or		%00000001
-	ld		[playerLightDirection], a
+	ld		[hl], a
 
 	ret
 
 MoveDown:
-	; TODO Move the screen to keep the player visible
-	ld a, [playerLightYPixel]
+	ld hl, playerLightYPixel
+	call WorldShift
 	inc a
-	ld [playerLightYPixel], a
+	ld [hl], a
 
-	ld		a, [playerLightDirection]
+	ld		hl, playerLightDirection
+	call WorldShift
 	and		%11111110
-	ld		[playerLightDirection], a
+	ld		[hl], a
 
 	ret
 
@@ -626,9 +646,10 @@ UsePadAB:
 	ret
 
 ScrollRight:
-	
-	ld	a, [rSCX]	; load a with x scroll value
+	ld	hl, lightScrollX	; load a with x scroll value
+	call WorldShift
 	inc a	; increment a
+	ld [hl], a
 	ld	[rSCX], a
 	and	%00000111	; check if divisible by 8
 	jp z, .IncBgLight
@@ -636,29 +657,32 @@ ScrollRight:
 
 ; increment background light vram east and west
 .IncBgLight:
-	ld	a, [backgroundLightVramEast]
+	ld	hl, backgroundLightVramEast
+	call WorldShift
 	inc	a
 	cp a, 32
 	jr nz, .SaveEastInc
 	ld a, 0
 .SaveEastInc
-	ld	[backgroundLightVramEast], a
+	ld	[hl], a
 	
-	ld	a, [backgroundLightVramWest]
+	ld	hl, backgroundLightVramWest
+	call WorldShift
 	inc	a
 	cp a, 32
 	jr nz, .SaveWestInc
 	ld a, 0
 .SaveWestInc
-	ld [backgroundLightVramWest], a
+	ld [hl], a
 	
-	ld a, [backgroundLightOffset]
+	ld hl, backgroundLightOffset
+	call WorldShift
 	inc a
 	cp 128
 	jr nz, .SaveOffsetInc
 	ld a, 0
 .SaveOffsetInc
-	ld [backgroundLightOffset], a
+	ld [hl], a
 	
 	ld a, 1
 	ld [backgroundDrawDirection], a
@@ -666,8 +690,10 @@ ScrollRight:
 	ret
 
 ScrollLeft:
-	ld	a, [rSCX]	; load a with screen x scroll
+	ld	hl, lightScrollX	; load a with screen x scroll
+	call WorldShift
 	dec	a	; decrement a
+	ld [hl], a
 	ld	[rSCX], a
 	and	%00000111	; check if divisible by 8
 	jp z, .DecBgLight
@@ -675,29 +701,32 @@ ScrollLeft:
 	
 ; decrement background light vram east and west
 .DecBgLight:
-	ld	a, [backgroundLightVramEast]
+	ld	hl, backgroundLightVramEast
+	call WorldShift
 	cp a, 0
 	jr nz, .SaveEastDec
 	ld a, 32
 .SaveEastDec
 	dec	a
-	ld	[backgroundLightVramEast], a
+	ld	[hl], a
 	
-	ld	a, [backgroundLightVramWest]
+	ld	hl, backgroundLightVramWest
+	call WorldShift
 	cp a, 0
 	jr nz, .SaveWestDec
 	ld a, 32
 .SaveWestDec
 	dec a
-	ld [backgroundLightVramWest], a
+	ld [hl], a
 	
-	ld a, [backgroundLightOffset]
+	ld hl, backgroundLightOffset
+	call WorldShift
 	dec a
 	cp a, -1
 	jr nz, .SaveOffsetDec
 	ld a, 127
 .SaveOffsetDec
-	ld [backgroundLightOffset], a
+	ld [hl], a
 	
 	ld a, 2
 	ld [backgroundDrawDirection], a
@@ -706,9 +735,14 @@ ScrollLeft:
 	
 MoveA:	
 	; move screen to bottom of map
+	ld a, 1
+	ld [currentWorld], a
+	
 	ld	a, 128
 	ld	[rSCY], a	; set scroll y value to 145
 	
+	ld a, [darkScrollX]
+	ld [rSCX], a
 	
 	; flip palettes
 	; palletes
@@ -725,7 +759,11 @@ MoveA:
 MoveB:
 	; move screen to top of map
 	ld	a, 0
+	ld [currentWorld], a
 	ld	[rSCY], a	; set scroll y value to 145
+	
+	ld a, [lightScrollX]
+	ld [rSCX], a
 	
 	; flip palettes
 	; palletes
