@@ -188,7 +188,7 @@ start:
 	ld	a,%10000000
 	ld	[rAUDENA],a
 	
-	call PlaySound
+	;call PlaySound
 	
 	ld a, 0
 	ld [currentWorld], a
@@ -253,7 +253,7 @@ start:
 ; GAMEPLAY CODE
 .GameLoop
 	call StartScreen
-	call PlaySound
+	;call PlaySound
 	call ReadPad
 	;call EndingScreen
 	;clear backgroundDraw before checking for scroll
