@@ -253,7 +253,10 @@ start:
 ; GAMEPLAY CODE
 .GameLoop
 	call StartScreen
+	
+	ld hl, Sound1
 	call PlaySound
+	
 	call ReadPad
 	;call EndingScreen
 	;clear backgroundDraw before checking for scroll
@@ -266,8 +269,6 @@ start:
 	call 	Movement
 	call 	AnimatePlayer
 	
-	ld hl, Sound1
-	call PlaySound
 .NoMove:	
 
 
