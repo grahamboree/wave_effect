@@ -22,6 +22,7 @@ _PAD_LEFT		EQU		%00100000
 _PAD_UP			EQU		%01000000
 _PAD_DOWN		EQU		%10000000
 
+
 ; define sprites and attributes
 
 ; EXAMPLE:
@@ -91,6 +92,7 @@ playerDarkDirection 	EQU _RAM_BLOCK_1+21		;bit 0 = up/down, up = 0;  bit 1 = lef
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _RAM_BLOCK_2 EQU	_RAM_BLOCK_1+128
 
+startScreenToggle	EQU	_RAM_BLOCK_2+1
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _RAM_BLOCK_3 EQU	_RAM_BLOCK_2+128
@@ -160,6 +162,15 @@ start:
 	ld		de, _SCRN0		; map 0 loaction
 	call	CopyTileMap
 
+	; copy	window tile map
+	ld	hl, WindowStart
+	ld	de, _SCRN1		; map 1 location
+	ld	bc, 32*32		; screen size
+	call CopyMemory
+	
+	ld	a, 0			; load start screen toggle value
+	ld	[startScreenToggle], a
+	
 	; sound
 	ld a, 0
 	ld [soundToggle], a
@@ -180,6 +191,13 @@ start:
 	ld [backgroundLightVramWest], a
 	
 	; copy	window tile map
+	ld	hl, WindowStart
+	ld	de, _SCRN1		; map 1 location
+	ld	bc, 20*18		; screen size
+	call CopyMemory
+	
+	ld	a, 0			; load start screen toggle value
+	ld	[startScreenToggle], a
 	
 	; erase sprite memory
 	ld		de, _OAMRAM		; Sprite attribut memory
@@ -215,6 +233,7 @@ start:
 	
 ; GAMEPLAY CODE
 .GameLoop
+	call StartScreen
 	call PlaySound
 	call ReadPad
 	call UsePadAB
@@ -412,6 +431,41 @@ ReadPad:
 	cpl
 	ld	[padInput], a
 	ret
+
+StartScreen:
+	ld	a, [startScreenToggle]
+	cp	0
+	ret nz
+	
+	ld	a, 8
+	ld	[rWX], a	; window x location
+	
+	ld	a, 0
+	ld	[rWY], a	; window y location
+	
+	; activate windows and deactivate sprites
+	ld	a, [rLCDC]	; load LCD control contents
+	or	LCDCF_WINON	; check if window is on
+	res	1, a	; bit 1 to 0
+	ld	[rLCDC], a
+	
+.CheckExit
+	call ReadPad
+	and	%00001000	; start button
+	jr	z, .CheckExit
+	
+.CloseWindow
+	; turn off start screen toggle
+	ld	a, 5
+	ld	[startScreenToggle], a
+	
+	; deactivate the window and activate the sprites
+	ld	a, [rLCDC]
+	res	5, a	; reset window sprites to 0
+	or	LCDCF_OBJON	; turn on objects
+	ld	[rLCDC], a	; apply changes
+	ret
+	
 	
 ; Uses Pad values to call functions
 UsePadAB:
@@ -654,3 +708,8 @@ EndTiles:
 Map:
 INCLUDE"mainmap.z80"
 EndMap:
+
+;window start
+WindowStart:
+INCLUDE"windowstart.z80"
+EndWindowStart:
