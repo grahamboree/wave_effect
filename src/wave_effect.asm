@@ -526,6 +526,7 @@ GetCollision:
 ; returns 1 on a if it does, otherwise sets a to 0
 CollidesWith:
 
+
 	; determine if we collide with this type of tile
 	cp		8
 	jr		z, .Collides
@@ -533,11 +534,18 @@ CollidesWith:
 	jr		z, .Collides
 
 	; 11-26
-	cp 		11
+	cp 		12
 	jp		c, .NoCollision		; no collision if it's less than 11
 
-	cp 		26
+	cp 		28
 	jp		c, .Collides		; collision if less than 26
+
+	cp		29
+	jr		z, .Collides
+	cp		30
+	jr		z, .Collides
+	cp		31
+	jr		z, .Collides
 
 .NoCollision:
 	ld		a, 0
