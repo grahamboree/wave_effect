@@ -220,6 +220,7 @@ start:
 	ld [playerLightYPixel], a
 	ld [playerLightXPixel], a
 	
+	ld a, 45
 	ld [playerDarkYPixel], a
 	ld [playerDarkXPixel], a
 	
