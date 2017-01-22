@@ -255,7 +255,7 @@ start:
 	call StartScreen
 	call PlaySound
 	call ReadPad
-	call EndingScreen
+	;call EndingScreen
 	;clear backgroundDraw before checking for scroll
 	ld a, 0
 	ld [backgroundDrawDirection], a
@@ -933,34 +933,34 @@ FillMemory:
 	jr FillMemory ; loop
 
 ; End Screen
-EndingScreen:
+;EndingScreen:
 	; using select button to test
 	
-	and	%00000100	; select button
-	ret	z
+	;and	%00000100	; select button
+	;ret	z
 	
-	call StopLCD
+	;call StopLCD
 	
 	; copy	window tile map
-	ld	hl, END_SCREEN
-	ld	de, _SCRN1		; map 1 location
-	ld	bc, 20*18		; screen size
-	call CopyMemory
+	;ld	hl, END_SCREEN
+	;ld	de, _SCRN1		; map 1 location
+	;ld	bc, 20*18		; screen size
+	;call CopyMemory
 	
 	; set window location
-	ld	a, 8
-	ld	[rWX], a	; window x location
+	;ld	a, 8
+	;ld	[rWX], a	; window x location
 	
-	ld	a, 0
-	ld	[rWY], a	; window y location
+	;ld	a, 0
+	;ld	[rWY], a	; window y location
 	
 	; activate LCD with window on
 	;ld	a, LCDCF_ON|LCDCF_BG8000|LCDCF_BG9800|LCDCF_BGON|LCDCF_OBJ8|LCDCF_OBJOFF|LCDCF_WIN9C00|LCDCF_WINON
-	ld	a, %11110000
-	ld	[rLCDC], a
+	;ld	a, %11110000
+	;ld	[rLCDC], a
 	
 	; halt game
-	ret
+	;ret
 	
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;  SPRITE FILES ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -981,6 +981,6 @@ INCLUDE"windowstart.z80"
 EndWindowStart:
 
 ; End Screen
-EndScreen:
-INCLUDE"endscreen.z80"
-EndEndScreen:
+;EndScreen:
+;INCLUDE"endscreen.z80"
+;EndEndScreen:
