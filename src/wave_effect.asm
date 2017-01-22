@@ -201,7 +201,7 @@ start:
 	
 	; erase sprite memory
 	ld		de, _OAMRAM		; Sprite attribut memory
-	ld		bc, 46*4		; 40 sprites, 4 bytes each
+	ld		bc, 56*4		; 40 sprites, 4 bytes each
 	ld		l, 0			; put everything to zero
 	call 	FillMemory		; Unused sprites remain off-screen
 	
