@@ -524,7 +524,6 @@ GetCollision:
 ; a = tile type
 ; returns 1 on a if it does, otherwise sets a to 0
 CollidesWith:
-	ld		a, 0
 
 	; determine if we collide with this type of tile
 	cp		8
@@ -540,6 +539,7 @@ CollidesWith:
 	jp		c, .Collides		; collision if less than 26
 
 .NoCollision:
+	ld		a, 0
 	ret
 
 .Collides:
