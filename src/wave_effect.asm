@@ -22,6 +22,7 @@ _PAD_LEFT		EQU		%00100000
 _PAD_UP			EQU		%01000000
 _PAD_DOWN		EQU		%10000000
 
+_PLAYER_ANIM_SPEED	EQU		5
 
 ; define sprites and attributes
 
@@ -73,21 +74,23 @@ backgroundDarkVramWest	EQU		_RAM_BLOCK_0+9			;where are we writing our next west
 ;BLOCK 1 is mostly for player data, including direction, animation states, sprite tile, etc.
 _RAM_BLOCK_1			EQU	_RAM_BLOCK_0+128
 
-playerLightXFrame		EQU _RAM_BLOCK_1		;player x coordinate (page in world)
-playerLightXPixel		EQU _RAM_BLOCK_1+1		;player x coordinate (relative to page)
-playerLightYFrame		EQU _RAM_BLOCK_1+2		;player y coordinate (page in world)
-playerLightYPixel		EQU _RAM_BLOCK_1+3		;player y coordinate (relative to page)
-playerLightFrame		EQU _RAM_BLOCK_1+4		;what frame of the animation
-playerLightDirection 	EQU _RAM_BLOCK_1+5		;bit 0 = up/down, up = 0;  bit 1 = left/right, left = 0
+playerLightXFrame		EQU _RAM_BLOCK_1		; player x coordinate (page in world)
+playerLightXPixel		EQU _RAM_BLOCK_1+1		; player x coordinate (relative to page)
+playerLightYFrame		EQU _RAM_BLOCK_1+2		; player y coordinate (page in world)
+playerLightYPixel		EQU _RAM_BLOCK_1+3		; player y coordinate (relative to page)
+playerLightFrame		EQU _RAM_BLOCK_1+4		; what frame of the animation
+playerLightDirection 	EQU _RAM_BLOCK_1+5		; bit 0 = up/down, up = 1;  bit 1 = left/right, left = 1
+playerLightSpriteNumber	EQU	_RAM_BLOCK_1+6		; which sprite number is used to render the player
 
 ; reserved for future player data
 
-playerDarkXFrame		EQU _RAM_BLOCK_1+16		;player x coordinate (page in world)
-playerDarkXPixel		EQU _RAM_BLOCK_1+17		;player x coordinate (relative to page)
-playerDarkYFrame		EQU _RAM_BLOCK_1+18		;player y coordinate (page in world)
-playerDarkYPixel		EQU _RAM_BLOCK_1+19		;player y coordinate (relative to page)
-playerDarkFrame			EQU _RAM_BLOCK_1+20		;what frame of the animation
-playerDarkDirection 	EQU _RAM_BLOCK_1+21		;bit 0 = up/down, up = 0;  bit 1 = left/right, left = 0
+playerDarkXFrame		EQU _RAM_BLOCK_1+16		; player x coordinate (page in world)
+playerDarkXPixel		EQU _RAM_BLOCK_1+17		; player x coordinate (relative to page)
+playerDarkYFrame		EQU _RAM_BLOCK_1+18		; player y coordinate (page in world)
+playerDarkYPixel		EQU _RAM_BLOCK_1+19		; player y coordinate (relative to page)
+playerDarkFrame			EQU _RAM_BLOCK_1+20		; what frame of the animation
+playerDarkDirection 	EQU _RAM_BLOCK_1+21		; bit 0 = up/down, up = 1;  bit 1 = left/right, left = 1
+playerDarkSpriteNumber	EQU	_RAM_BLOCK_1+22		; which sprite number is used to render the player
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _RAM_BLOCK_2 EQU	_RAM_BLOCK_1+128
@@ -211,21 +214,23 @@ start:
 	ld	a, 32
 	ld	[rSCX], a
 	
-	; Position player at a resonable start location.
+	; Set the initial state of the player.
 	ld a, 60
 	ld [playerLightYPixel], a
-	ld a, 60
 	ld [playerLightXPixel], a
+	ld a, _PLAYER_ANIM_SPEED
+	ld [playerLightFrame], a
+	ld a, 0
+	ld [playerLightSpriteNumber], a
 	
 	; create player sprite
+	call RenderPlayer
+
 	ld a, [playerLightYPixel]
 	ld [_SPR0_Y], a
 	ld a, [playerLightXPixel]
 	ld [_SPR0_X], a
-	ld a, 0
-	ld [_SPR0_NUM], a
-	ld a, 16 | 32
-	ld [_SPR0_ATT], a
+
 	
 	; configure and activate display
 	ld	a, LCDCF_ON|LCDCF_BG8000|LCDCF_BG9800|LCDCF_BGON|LCDCF_OBJ8|LCDCF_OBJON|LCDCF_WIN9C00
@@ -238,6 +243,7 @@ start:
 	call ReadPad
 	call UsePadAB
 	call Movement
+	call AnimatePlayer
 
 .wait: ; wait for VBLANK
 	ld	a, [rLY]	; check scanline
@@ -260,10 +266,7 @@ start:
 ; RENDERING CODE
 
 	; Set the sprite x,y
-	ld a, [playerLightYPixel]
-	ld [_SPR0_Y], a
-	ld a, [playerLightXPixel]
-	ld [_SPR0_X], a
+	call RenderPlayer
 
 	; a small delay
 	ld		bc, 2000
@@ -349,6 +352,66 @@ start:
 ; Subroutines here:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+RenderPlayer:
+	ld a, [playerLightYPixel]
+	ld [_SPR0_Y], a
+	ld a, [playerLightXPixel]
+	ld [_SPR0_X], a
+
+	ld 		a, [playerLightDirection] ; has bit 1 set for left/right.  1 is left 
+	and		%00000001	; mask out the y-direction bit
+	sla		a
+	ld		b, a
+
+	ld 		a, [playerLightSpriteNumber]
+	add 	a, b
+	ld 		[_SPR0_NUM], a
+
+	; byte 3 bit 5 for x-swap
+	ld 		a, [playerLightDirection] ; has bit 1 set for left/right.  1 is left 
+	and		%00000010	; mask out the x-direction bit
+	swap	a			; swap nibbles (puts the x direction value in the x-flip attribute bit location)
+	or		16			; additional flags
+	ld [_SPR0_ATT], a	; set the attributes
+
+	; Reset the up/down flag so the player doesn't stay facing up
+	ld		a, [playerLightDirection]
+	and		%11111110	; Clear the up bit		
+	ld		[playerLightDirection], a
+
+
+	ret
+
+AnimatePlayer:
+	; If we have no input, just set it to the start sprite
+	ld	a, [padInput]
+	cp 0
+	jr z, .reset_anim
+
+	ld	a, [playerLightFrame]	; load anim speed var into a
+	dec	a						; decrement
+	ld	[playerLightFrame], a	; save value
+	cp	0						; is it 0 yet?
+	ret	nz						; if it is not, return (this is the delay)
+
+	ld	a, _PLAYER_ANIM_SPEED	; reset when 0
+	ld	[playerLightFrame], a	; save original value
+	
+	; change the sprite
+	ld	a, [playerLightSpriteNumber]	; load tile number
+	inc	a	; increment
+	ld	[playerLightSpriteNumber], a	; save tile number
+	cp	2	; check to see if it's over
+	ret	nz	; if not, return
+	
+.reset_anim
+	ld	a, _PLAYER_ANIM_SPEED	; reset when 0
+	ld	[playerLightFrame], a	; save original value
+
+	ld	a, 0	; retart aniamtion loop
+	ld	[playerLightSpriteNumber], a	; save sprite
+	ret
+
 Movement:
 	ld		a, [padInput]	; load status of pad
 	ld		b, a			; Save in b so we can reset easily
@@ -374,13 +437,24 @@ MoveLeft:
 	ld a, [playerLightXPixel]
 	dec a
 	ld [playerLightXPixel], a
+
+	; Set the direction flag bit
+	ld		a, [playerLightDirection]
+	or		%00000010
+	ld		[playerLightDirection], a
+
 	ret
 
 MoveRight:
 	; TODO Move the screen to keep the player visible
-	ld a, [playerLightXPixel]
-	inc a
-	ld [playerLightXPixel], a
+	ld		a, [playerLightXPixel]
+	inc		a
+	ld		[playerLightXPixel], a
+
+	ld		a, [playerLightDirection]
+	and		%11111101
+	ld		[playerLightDirection], a
+
 	ret
 
 MoveUp:
@@ -388,6 +462,11 @@ MoveUp:
 	ld a, [playerLightYPixel]
 	dec a
 	ld [playerLightYPixel], a
+
+	ld		a, [playerLightDirection]
+	or		%00000001
+	ld		[playerLightDirection], a
+
 	ret
 
 MoveDown:
@@ -395,6 +474,11 @@ MoveDown:
 	ld a, [playerLightYPixel]
 	inc a
 	ld [playerLightYPixel], a
+
+	ld		a, [playerLightDirection]
+	and		%11111110
+	ld		[playerLightDirection], a
+
 	ret
 
 ; read input pad and store the state into [padInput]
