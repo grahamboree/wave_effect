@@ -1087,10 +1087,10 @@ PlaySound:
     ld a, %00000000
     ld [rAUD1SWEEP], a
 	
-    ld a, %10011000
+    ld a, %10011111
     ld [rAUD1LEN], a
 	
-    ld a, %00010100
+    ld a, %00010000
     ld [rAUD1ENV], a
 	
     ld a, %11010111
@@ -1101,11 +1101,11 @@ PlaySound:
 	ret
 
 Sound1:
-	DB %00000000
-    DB %10011000
+	DB %01001011
+    DB %10011111
     DB %11110100
     DB %11010111
-    DB %11000010
+    DB %11000001
 
 ; memory copy routine
 ; copy number of bytes from one directory to another
