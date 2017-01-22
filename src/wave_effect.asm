@@ -158,8 +158,7 @@ start:
 	; copy tile maps
 	ld		hl, Map
 	ld		de, _SCRN0		; map 0 loaction
-	ld		bc, 128*32		; 32 by 32 tiles
-	call	CopyMemory
+	call	CopyTileMap
 
 	; sound
 	ld a, 0
@@ -209,7 +208,6 @@ start:
 	ld	a, LCDCF_ON|LCDCF_BG8000|LCDCF_BG9800|LCDCF_BGON|LCDCF_OBJ8|LCDCF_OBJON|LCDCF_WIN9C00
 	ld	[rLCDC], a
 	
-
 ; GAMEPLAY CODE
 .GameLoop
 	call PlaySound
@@ -223,7 +221,6 @@ start:
 	jr	nz, .wait	; if not, loop again
 	
 ; End of gameplay code
-	;call WaitForVBlank
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;TIME CRITICAL STUFF STARTS HERE - Edit at own risk!
@@ -249,6 +246,10 @@ start:
 	call	Delay
 
 	jr .GameLoop
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;TIME CRITICAL STUFF ENDS HERE
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ; Render the appropriate sprites
 	
@@ -318,7 +319,6 @@ start:
 	jr nz, .CopyBgLine
 	
 .DoneBg
-; Subroutines here:
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -490,7 +490,6 @@ MoveB:
 	
 ;	ret
 	
-	
 ; Spin-locks until a VBLANK
 ; destroys a
 WaitForVBlank:
@@ -586,10 +585,39 @@ CopyMemory:
 	ret	z ; if zero, return
 
 	; no? continue
-	inc hl ; Move to the next source address
-	inc de ; Move to the next destination address
+	inc hl ; Move the source pointer
+	inc de ; Move the destination pointer
 	jr CopyMemory ; loop
-	
+
+; hl: source address
+; de: destination address
+CopyTileMap:
+	ld	b, 32 ; number of lines to copy
+
+.copy_bg_row
+	; Do we have more lines to copy?
+	ld		a, b
+	add 	a, 0
+	ret 	z ; if zero, return
+
+	; decrement the line count and save in b
+	sub 	1
+	ld 		b, a
+	push 	bc
+
+	; copy a line
+	ld		bc, 32
+	call 	CopyMemory
+
+	; add offset to the src pointer
+	ld		bc, 96
+	add		hl, bc
+
+	pop 	bc
+	inc hl
+	inc de
+	jr 		.copy_bg_row ; loop
+
 ; fill memory routine
 ; fill a number of bytes of memory with data
 ; expects the parameters:
