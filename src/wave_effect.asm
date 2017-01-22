@@ -495,11 +495,11 @@ GetFuturePlayerTileXY:
 	ld		a, [padInput]
 	and		_PAD_UP
 	jr		nz, .TestDown
-	dec		hl
+	inc		hl
 .TestDown:	
 	and		_PAD_DOWN
 	jr		nz, .YTestDone
-	inc		hl
+	dec		hl
 .YTestDone:	
 
 	; divide hl by 8
