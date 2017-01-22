@@ -63,13 +63,18 @@ currentWorld	EQU		_RAM_BLOCK_0+1			;Which world are we in
 currentLevel	EQU		_RAM_BLOCK_0+2			;Which level are we on
 
 backgroundDrawDirection	EQU		_RAM_BLOCK_0+3			;Which direction of the background do we draw, 1 = east, 2 = west
+
 backgroundLightOffset	EQU		_RAM_BLOCK_0+4			;how far to the right (in tiles) is our leftmost Light bg tile in data
 backgroundDarkOffset	EQU		_RAM_BLOCK_0+5			;how far to the right (in tiles) is our leftmost Dark bg tile in data
+
 backgroundLightVramEast	EQU		_RAM_BLOCK_0+6			;where are we writing our next east tile 0-31
-backgroundLightVramWest	EQU		_RAM_BLOCK_0+7			;where are we writing our next west tile 0-31
-backgroundDarkVramEast	EQU		_RAM_BLOCK_0+8			;where are we writing our next east tile 0-31
+backgroundDarkVramEast	EQU		_RAM_BLOCK_0+7			;where are we writing our next east tile 0-31
+
+backgroundLightVramWest	EQU		_RAM_BLOCK_0+8			;where are we writing our next west tile 0-31
 backgroundDarkVramWest	EQU		_RAM_BLOCK_0+9			;where are we writing our next west tile 0-31
 
+lightScrollX			EQU		_RAM_BLOCK_0+10
+darkScrollX				EQU		_RAM_BLOCK_0+11
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;BLOCK 1 is mostly for player data, including direction, animation states, sprite tile, etc.
 _RAM_BLOCK_1			EQU	_RAM_BLOCK_0+128
@@ -110,6 +115,9 @@ _RAM_BLOCK_7 EQU	_RAM_BLOCK_6+128
 soundToggle EQU _RAM_BLOCK_7
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;Macros
 
 ;CARTRIDGE HEADER
 ;**********************************************************************
@@ -155,9 +163,9 @@ start:
 	call StopLCD
 	
 	; copy tiles
-	ld		hl, MAIN_TILES				; HL loaded with sprite data
-	ld		de, _VRAM					; address for video memory into de
-	ld		bc, END_TILES-MAIN_TILES	; number of bytes to copy
+	ld		hl, Tiles			; HL loaded with sprite data
+	ld		de, _VRAM			; address for video memory into de
+	ld		bc, EndTiles-Tiles	; number of bytes to copy
 	call	CopyMemory
 	
 	; copy tile maps
@@ -195,8 +203,10 @@ start:
 	ld [backgroundDarkOffset], a
 	ld a, 31
 	ld [backgroundLightVramEast], a
+	ld [backgroundDarkVramEast], a
 	ld a, 0
 	ld [backgroundLightVramWest], a
+	ld [backgroundDarkVramWest], a
 	
 	
 	; erase sprite memory
@@ -209,25 +219,35 @@ start:
 	ld	a, 0
 	ld	[rSCY], a
 	ld	a, 48
+	ld [lightScrollX], a
+	ld [darkScrollX], a
 	ld	[rSCX], a
 	
 	; Set the initial state of the player.
 	ld a, 60
 	ld [playerLightYPixel], a
 	ld [playerLightXPixel], a
+	
+	ld [playerDarkYPixel], a
+	ld [playerDarkXPixel], a
+	
 	ld a, _PLAYER_ANIM_SPEED
 	ld [playerLightFrame], a
+	ld [playerDarkFrame], a
 	ld a, 0
 	ld [playerLightSpriteNumber], a
+	ld [playerDarkSpriteNumber], a
 	
 	; create player sprite
 	call RenderPlayer
 
-	ld a, [playerLightYPixel]
+	ld hl, playerLightYPixel
+	call WorldShift
 	ld [_SPR0_Y], a
-	ld a, [playerLightXPixel]
+	
+	ld hl, playerLightXPixel
+	call WorldShift
 	ld [_SPR0_X], a
-
 	
 	; configure and activate display
 	ld	a, LCDCF_ON|LCDCF_BG8000|LCDCF_BG9800|LCDCF_BGON|LCDCF_OBJ8|LCDCF_OBJON|LCDCF_WIN9C00
@@ -309,11 +329,15 @@ start:
 	jr z, .DrawEast
 .DrawWests:
 	;get the destination in vram
-	ld a, [backgroundLightVramWest]
+	ld hl, backgroundLightVramWest
+	call WorldShift
 	ld l, a
 	add hl,de
+	push hl
 	;set the low index to offset-6
-	ld a, [backgroundLightOffset]
+	ld hl, backgroundLightOffset
+	call WorldShift
+	pop hl
 	sub 6
 	add a,c
 	ld c, a
@@ -321,11 +345,16 @@ start:
 	jr z, .CopyBgLine
 .DrawEast:
 	;get the destination in vram
-	ld a, [backgroundLightVramEast]
+	ld hl, backgroundLightVramEast
+	call WorldShift
+	ld h, 0
 	ld l, a
 	add hl,de
+	push hl
 	;set the high index to offset+20+6
-	ld a, [backgroundLightOffset]
+	ld hl, backgroundLightOffset
+	call WorldShift
+	pop hl
 	add a,25
 	add a,c
 	ld c, a
@@ -361,7 +390,7 @@ start:
 	ld		bc, 2000
 	call	Delay
 
-	jr .GameLoop
+	jp .GameLoop
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Subroutines here:
@@ -448,28 +477,44 @@ Movement:
 	ret
 
 MoveLeft:
-	; TODO Move the screen to keep the player visible
-	ld a, [playerLightXPixel]
-	dec a
-	ld [playerLightXPixel], a
-
 	; Set the direction flag bit
 	ld		a, [playerLightDirection]
 	or		%00000010
 	ld		[playerLightDirection], a
+	
+	;Check if we should move the screen 
+	ld a, [playerLightXPixel]
+	cp 32
+	jp z, .LeftScreen
+.LeftPlayer
+	;Change player position
+	dec a
+	ld [playerLightXPixel], a
 
+	ret
+.LeftScreen
+	;Change screen position, load data if necessary
+	call ScrollLeft
 	ret
 
 MoveRight:
-	; TODO Move the screen to keep the player visible
-	ld		a, [playerLightXPixel]
-	inc		a
-	ld		[playerLightXPixel], a
-
+	;direction
 	ld		a, [playerLightDirection]
 	and		%11111101
 	ld		[playerLightDirection], a
-
+	
+	;check for move edge
+	ld		a, [playerLightXPixel]
+	cp a, 121
+	jp z, .RightScreen
+.RightPlayer
+	;update player position
+	inc		a
+	ld		[playerLightXPixel], a
+	ret
+.RightScreen
+	;move scroll, load bg if necessary
+	call ScrollRight
 	ret
 
 MoveUp:
@@ -571,16 +616,17 @@ UsePadAB:
 	ld	a, [padInput]	; load status of pad
 	and	%0000010	; A button
 	call	nz, MoveA ; if pressed, call routine move right
-	;call	nz, LoadRight
+	;call	nz, ScrollRight
 	
 	ld	a, [padInput]
 	and	%00000001	; B button 
 	call	nz, MoveB ; ; if pressed, call routine move left
-	;call	nz, LoadLeft
+	;call	nz, ScrollLeft
 	
 	ret
 
-LoadRight:
+ScrollRight:
+	
 	ld	a, [rSCX]	; load a with x scroll value
 	inc a	; increment a
 	ld	[rSCX], a
@@ -619,7 +665,7 @@ LoadRight:
 	
 	ret
 
-LoadLeft:
+ScrollLeft:
 	ld	a, [rSCX]	; load a with screen x scroll
 	dec	a	; decrement a
 	ld	[rSCX], a
@@ -768,6 +814,15 @@ PlaySound:
     ld a, %00001010
 .EndSoundLoop
 	ret
+	
+WorldShift:
+	ld a, [currentWorld]
+	cp a, 0
+	jr z, .DoneWorldShift
+	inc hl
+.DoneWorldShift
+	ld a, [hl]
+	ret
 
 ; memory copy routine
 ; copy number of bytes from one directory to another
@@ -843,11 +898,14 @@ FillMemory:
 ;;  SPRITE FILES ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+Tiles:
 INCLUDE "maintiles.z80"
+EndTiles:
 
 ;screen size 20x17
 Map:
 INCLUDE"mainmap.z80"
+EndMap:
 
 ;window start
 WindowStart:
