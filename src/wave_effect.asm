@@ -134,7 +134,9 @@ start:
 	di				; disable interupts
 	ld	sp, $ffff	; load stack pointer into highest ram location
 	
-
+	;Kill LCD immediately
+	call StopLCD
+	
 ; initialization
 ; load pallets for sprites, windows and backgrounds here
 ; load map location and scroll variables
@@ -155,9 +157,6 @@ start:
 	
 	;scroll variables
 
-	
-	call StopLCD
-	
 	; copy tiles
 	ld		hl, Tiles			; HL loaded with sprite data
 	ld		de, _VRAM			; address for video memory into de
@@ -257,9 +256,10 @@ start:
 
 
 .wait: ; wait for VBLANK
-	ld	a, [rLY]	; check scanline
-	cp	145			; compare to final scanline
-	jr	nz, .wait	; if not, loop again
+	ld a, [rSTAT]
+	and %00000011
+	cp 1 
+	jr nz, .wait
 	
 ; End of gameplay code
 
@@ -960,9 +960,11 @@ MoveB:
 ; Spin-locks until a VBLANK
 ; destroys a
 WaitForVBlank:
-	ld a, [rLY]	; get the scanline number
-	cp 145		; compare to the final scanline number
-	jr nz, WaitForVBlank	; if not equal, loop again
+	ld a, [rSTAT]
+	and %00000011
+	cp 1 
+	jr nz, WaitForVBlank
+	ret
 
 ; Turn off the LCD
 ; destroys a
