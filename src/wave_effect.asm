@@ -655,7 +655,18 @@ Movement:
 	ld		a, b
 	and		_PAD_LEFT
 	call	nz, MoveLeft
-	
+
+	; Skip vertical movement if there was horizontal movement
+	ld		a, _PAD_RIGHT
+	or		_PAD_LEFT
+	ld		b, a
+	ld		a, [padInput]
+	and		b
+	ret		nz
+
+	ld		a, [padInput]
+	ld		b, a
+
 	ld		a, b
 	and		_PAD_UP
 	call	nz, MoveUp
