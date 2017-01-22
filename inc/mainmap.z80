@@ -18,7 +18,7 @@ MAIN_MAPWidth  EQU 128
 MAIN_MAPHeight EQU 32
 MAIN_MAPBank   EQU 0
 
- SECTION "mainmap", HOME
+ SECTION "mainmap", HOME[$3000]
 
 MAIN_MAP::
 DB $29,$29,$29,$29,$29,$29,$29,$29,$29,$29

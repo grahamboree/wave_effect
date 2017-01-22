@@ -161,7 +161,7 @@ start:
 	call	CopyMemory
 	
 	; copy tile maps
-	ld		hl, Map
+	ld		hl, MAIN_MAP
 	ld		de, _SCRN0		; map 0 loaction
 	call	CopyTileMap
 
@@ -183,6 +183,10 @@ start:
 	ld	[rAUDENA],a
 	
 	call PlaySound
+	
+	ld a, 0
+	ld [currentWorld], a
+	ld [currentLevel], a
 	
 	; set current background offset
 	ld a, 6
@@ -241,6 +245,11 @@ start:
 	call StartScreen
 	call PlaySound
 	call ReadPad
+	
+	;clear backgroundDraw before checking for scroll
+	ld a, 0
+	ld [backgroundDrawDirection], a
+	
 	call UsePadAB
 	call Movement
 	call AnimatePlayer
@@ -268,12 +277,6 @@ start:
 	; Set the sprite x,y
 	call RenderPlayer
 
-	; a small delay
-	ld		bc, 2000
-	call	Delay
-
-	jr .GameLoop
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;TIME CRITICAL STUFF ENDS HERE
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -284,21 +287,17 @@ start:
 
 	;NOTE: Currently only draws the light world (for simplicity)
 	
-	;DE = 32, so we can iterate our background output targets
-	ld d, 0
-	ld e, 32
-	
-	;store the counter to the stack
-	ld a, 16
-	push af
-	
 	;Check if we need to draw a new bg tile
 	ld a, [backgroundDrawDirection]
 	cp 0
 	jr z, .DoneBg
 	
-	;load the background map into hl
-	ld bc, Map
+	;store the counter to the stack
+	ld a, 16
+	push af
+	
+	;load the background map into bc
+	ld bc, MAIN_MAP
 	
 	;offset the index into Bg source if we are in dark world
 	ld a, [currentWorld]
@@ -309,13 +308,17 @@ start:
 	ld b, a			;1
 	
 .DrawBg:
+	ld de, _SCRN0
+	ld h, 0
 	;check which direction we are drawing
 	ld a, [backgroundDrawDirection]
 	cp _EAST
 	jr z, .DrawEast
 .DrawWests:
 	;get the destination in vram
-	ld hl, backgroundLightVramWest
+	ld a, [backgroundLightVramWest]
+	ld l, a
+	add hl,de
 	;set the low index to offset-6
 	ld a, [backgroundLightOffset]
 	sub 6
@@ -324,16 +327,22 @@ start:
 	jr z, .CopyBgLine
 .DrawEast:
 	;get the destination in vram
-	ld hl, backgroundLightVramEast
+	ld a, [backgroundLightVramEast]
+	ld l, a
+	add hl,de
 	;set the high index to offset+20+6
 	ld a, [backgroundLightOffset]
-	add 26
+	add a,26
+	add a,c
 	ld c, a
 	
 	;bc is now the correct source of our ROM data
 	;hl is the correct destination of our VRAM
 .CopyBgLine:
-	
+	;DE = 32, so we can iterate our background output targets
+	ld d, 0
+	ld e, 32
+.NextBgLine	
 	ld a, [bc]
 	ld [hl], a
 	add hl, de		;add 32 to the RAM destination
@@ -343,10 +352,15 @@ start:
 	dec a
 	jr z, .DoneBg
 	push af
-	jr nz, .CopyBgLine
+	jr nz, .NextBgLine
 	
 .DoneBg
 
+	; a small delay
+	ld		bc, 2000
+	call	Delay
+
+	jr .GameLoop
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Subroutines here:
@@ -556,20 +570,61 @@ UsePadAB:
 	ld	a, [padInput]	; load status of pad
 	and	%0000010	; A button
 	call	nz, MoveA ; if pressed, call routine move right
+	;call	nz, LoadRight
 	
 	ld	a, [padInput]
 	and	%00000001	; B button 
 	call	nz, MoveB ; ; if pressed, call routine move left
+	;call	nz, LoadLeft
 	
 	ret
 
-MoveA:
-;	ld	a, [rSCX]	; load a with x scroll value
-;	inc a	; increment a
-;	ld	[rSCX], a
-;	and	%00000111	; check if divisible by 8
-;	jp z, .IncBgLight
+LoadRight:
+	ld	a, [rSCX]	; load a with x scroll value
+	inc a	; increment a
+	ld	[rSCX], a
+	and	%00000111	; check if divisible by 8
+	jp z, .IncBgLight
+	ret
+
+; increment background light vram east and west
+.IncBgLight:
+	ld	a, [backgroundLightVramEast]
+	inc	a
+	ld	[backgroundDarkVramEast], a
 	
+	ld	a,	[backgroundDarkVramWest]
+	inc	a
+	ld	[backgroundDarkVramWest], a
+	
+	ld a, 1
+	ld [backgroundDrawDirection], a
+	
+	ret
+
+LoadLeft:
+	ld	a, [rSCX]	; load a with screen x scroll
+	dec	a	; decrement a
+	ld	[rSCX], a
+	and	%00000111	; check if divisible by 8
+	jp z, .DecBgLight
+	ret	
+	
+; decrement background light vram east and west
+.DecBgLight:
+	ld	a, [backgroundLightVramEast]
+	dec	a
+	ld	[backgroundDarkVramEast], a
+	
+	ld	a,	[backgroundDarkVramWest]
+	dec	a
+	ld	[backgroundDarkVramWest], a
+	
+	ld a, 2
+	ld [backgroundDrawDirection], a
+	ret	
+	
+MoveA:	
 	; move screen to bottom of map
 	ld	a, 128
 	ld	[rSCY], a	; set scroll y value to 145
@@ -586,26 +641,8 @@ MoveA:
 	ld	[rOBP1], a		; into location 1
 	
 	ret 
-
-; increment background light vram east and west
-;.IncBgLight
-;	ld	a, [backgroundLightVramEast]
-;	inc	a
-;	ld	[backgroundDarkVramEast], a
-	
-;	ld	a,	[backgroundDarkVramWest]
-;	inc	a
-;	ld	[backgroundDarkVramWest], a
-	
-;	ret
 	
 MoveB:
-;	ld	a, [rSCX]	; load a with screen x scroll
-;	dec	a	; decrement a
-;	ld	[rSCX], a
-;	and	%00000111	; check if divisible by 8
-;	jp z, .DecBgLight
-	
 	; move screen to top of map
 	ld	a, 0
 	ld	[rSCY], a	; set scroll y value to 145
@@ -621,18 +658,6 @@ MoveB:
 	ld	[rOBP1], a		; into location 1
 	ret 
 
-; decrement background light vram east and west
-;.DecBgLight
-;	ld	a, [backgroundLightVramEast]
-;	dec	a
-;	ld	[backgroundDarkVramEast], a
-	
-;	ld	a,	[backgroundDarkVramWest]
-;	dec	a
-;	ld	[backgroundDarkVramWest], a
-	
-;	ret
-	
 ; Spin-locks until a VBLANK
 ; destroys a
 WaitForVBlank:
@@ -789,7 +814,6 @@ INCLUDE "maintiles.z80"
 EndTiles:
 
 ;screen size 20x17
-Map:
 INCLUDE"mainmap.z80"
 EndMap:
 
