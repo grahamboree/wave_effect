@@ -155,9 +155,9 @@ start:
 	call StopLCD
 	
 	; copy tiles
-	ld		hl, MAIN_TILES				; HL loaded with sprite data
-	ld		de, _VRAM					; address for video memory into de
-	ld		bc, END_TILES-MAIN_TILES	; number of bytes to copy
+	ld		hl, Tiles			; HL loaded with sprite data
+	ld		de, _VRAM			; address for video memory into de
+	ld		bc, EndTiles-Tiles	; number of bytes to copy
 	call	CopyMemory
 	
 	; copy tile maps
@@ -843,11 +843,14 @@ FillMemory:
 ;;  SPRITE FILES ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+Tiles:
 INCLUDE "maintiles.z80"
+EndTiles:
 
 ;screen size 20x17
 Map:
 INCLUDE"mainmap.z80"
+EndMap:
 
 ;window start
 WindowStart:
