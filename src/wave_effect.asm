@@ -528,7 +528,7 @@ StartScreen:
 	cp	0
 	ret nz
 	
-	ld	a, 0
+	ld	a, 8
 	ld	[rWX], a	; window x location
 	
 	ld	a, 0
