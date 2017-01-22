@@ -155,9 +155,9 @@ start:
 	call StopLCD
 	
 	; copy tiles
-	ld		hl, Tiles			; HL loaded with sprite data
-	ld		de, _VRAM			; address for video memory into de
-	ld		bc, EndTiles-Tiles	; number of bytes to copy
+	ld		hl, MAIN_TILES				; HL loaded with sprite data
+	ld		de, _VRAM					; address for video memory into de
+	ld		bc, END_TILES-MAIN_TILES	; number of bytes to copy
 	call	CopyMemory
 	
 	; copy tile maps
@@ -193,9 +193,9 @@ start:
 	ld a, 6
 	ld [backgroundLightOffset], a
 	ld [backgroundDarkOffset], a
-	ld a, 0
-	ld [backgroundLightVramEast], a
 	ld a, 31
+	ld [backgroundLightVramEast], a
+	ld a, 0
 	ld [backgroundLightVramWest], a
 	
 	
@@ -208,7 +208,7 @@ start:
 	; Position screen rect
 	ld	a, 0
 	ld	[rSCY], a
-	ld	a, 32
+	ld	a, 48
 	ld	[rSCX], a
 	
 	; Set the initial state of the player.
@@ -315,6 +315,7 @@ start:
 	;set the low index to offset-6
 	ld a, [backgroundLightOffset]
 	sub 6
+	add a,c
 	ld c, a
 	xor a
 	jr z, .CopyBgLine
@@ -325,27 +326,34 @@ start:
 	add hl,de
 	;set the high index to offset+20+6
 	ld a, [backgroundLightOffset]
-	add a,26
+	add a,25
 	add a,c
 	ld c, a
 	
 	;bc is now the correct source of our ROM data
 	;hl is the correct destination of our VRAM
 .CopyBgLine:
-	;DE = 32, so we can iterate our background output targets
-	ld d, 0
-	ld e, 32
-.NextBgLine	
-	ld a, [bc]
+	ld a, [bc]		;;copy the data
 	ld [hl], a
-	add hl, de		;add 32 to the RAM destination
-	inc b			;increment the ROM source
+	
+	ld de, 32		;add 32 to the RAM destination
+	add hl, de		
+	push hl			;store destination on stack
+	
+	ld hl, 0
+	add hl,bc
+	ld de, 128		;add 128 to the ROM source
+	add hl, de
+	push hl			
+	pop bc
+
+	pop hl			;pop destination into hl
 	
 	pop af
 	dec a
 	jr z, .DoneBg
 	push af
-	jr nz, .NextBgLine
+	jr nz, .CopyBgLine
 	
 .DoneBg
 
@@ -584,11 +592,27 @@ LoadRight:
 .IncBgLight:
 	ld	a, [backgroundLightVramEast]
 	inc	a
-	ld	[backgroundDarkVramEast], a
+	cp a, 32
+	jr nz, .SaveEastInc
+	ld a, 0
+.SaveEastInc
+	ld	[backgroundLightVramEast], a
 	
-	ld	a,	[backgroundDarkVramWest]
+	ld	a, [backgroundLightVramWest]
 	inc	a
-	ld	[backgroundDarkVramWest], a
+	cp a, 32
+	jr nz, .SaveWestInc
+	ld a, 0
+.SaveWestInc
+	ld [backgroundLightVramWest], a
+	
+	ld a, [backgroundLightOffset]
+	inc a
+	cp 128
+	jr nz, .SaveOffsetInc
+	ld a, 0
+.SaveOffsetInc
+	ld [backgroundLightOffset], a
 	
 	ld a, 1
 	ld [backgroundDrawDirection], a
@@ -606,15 +630,32 @@ LoadLeft:
 ; decrement background light vram east and west
 .DecBgLight:
 	ld	a, [backgroundLightVramEast]
+	cp a, 0
+	jr nz, .SaveEastDec
+	ld a, 32
+.SaveEastDec
 	dec	a
-	ld	[backgroundDarkVramEast], a
+	ld	[backgroundLightVramEast], a
 	
-	ld	a,	[backgroundDarkVramWest]
-	dec	a
-	ld	[backgroundDarkVramWest], a
+	ld	a, [backgroundLightVramWest]
+	cp a, 0
+	jr nz, .SaveWestDec
+	ld a, 32
+.SaveWestDec
+	dec a
+	ld [backgroundLightVramWest], a
+	
+	ld a, [backgroundLightOffset]
+	dec a
+	cp a, -1
+	jr nz, .SaveOffsetDec
+	ld a, 127
+.SaveOffsetDec
+	ld [backgroundLightOffset], a
 	
 	ld a, 2
 	ld [backgroundDrawDirection], a
+	
 	ret	
 	
 MoveA:	
@@ -802,14 +843,11 @@ FillMemory:
 ;;  SPRITE FILES ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-Tiles:
 INCLUDE "maintiles.z80"
-EndTiles:
 
 ;screen size 20x17
 Map:
 INCLUDE"mainmap.z80"
-EndMap:
 
 ;window start
 WindowStart:
