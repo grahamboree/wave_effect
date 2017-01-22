@@ -611,7 +611,13 @@ RenderPlayer:
 
 AnimatePlayer:
 	; If we have no input, just set it to the start sprite
+	ld		a, _PAD_LEFT
+	or		_PAD_RIGHT
+	or		_PAD_UP
+	or		_PAD_DOWN
+	ld		b, a
 	ld	a, [padInput]
+	and		b
 	cp 0
 	jr z, .reset_anim
 
