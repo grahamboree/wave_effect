@@ -109,7 +109,6 @@ _RAM_BLOCK_5 EQU	_RAM_BLOCK_4+128
 _RAM_BLOCK_6 EQU	_RAM_BLOCK_5+128
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _RAM_BLOCK_7 EQU	_RAM_BLOCK_6+128
-soundToggle EQU _RAM_BLOCK_7
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
@@ -180,16 +179,6 @@ start:
 	ld	a, 0			; load start screen toggle value
 	ld	[startScreenToggle], a
 	
-	; sound
-	ld a, 0
-	ld [soundToggle], a
-	
-	;turn on sound
-	ld	a,%10000000
-	ld	[rAUDENA],a
-	
-	;call PlaySound
-	
 	ld a, 0
 	ld [currentWorld], a
 	ld [currentLevel], a
@@ -253,7 +242,6 @@ start:
 ; GAMEPLAY CODE
 .GameLoop
 	call StartScreen
-	;call PlaySound
 	call ReadPad
 	;call EndingScreen
 	;clear backgroundDraw before checking for scroll
@@ -1010,42 +998,7 @@ Delay:
 .EndDelay:
 	ret
 
-PlaySound:
-    ld a, [rAUDENA]
-    and %00000010
-;    jr nz, .EndSoundLoop
-;    ld a, [soundToggle]
-;    cp 0
-;    jr z, .Rest
-    
-.Sound
-	ld a, 0
-    ld [soundToggle], a
-	
-    ld a, %10000000
-    ld [rAUD2LEN], a
-	
-    ld a, %11110111
-    ld [rAUD2ENV], a
-	
-    ld a, %00011110
-    ld [rAUD2LOW], a
-	
-    ld a, %10000110
-    ld [rAUD2HIGH], a
-    xor a
-    jr z, .EndSoundLoop
-.Rest:
-	ld a, 1
-    ld [soundToggle], a
-    ld a, %10000000
-    ld [rAUD2LEN], a
-    ld a, %01101010
-    ld [rAUD2ENV], a
-    ld a, %00001010
-.EndSoundLoop
-	ret
-	
+;Load data from the correct world
 WorldShift:
 	ld a, [currentWorld]
 	cp a, 0
