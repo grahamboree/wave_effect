@@ -16,12 +16,12 @@ Tile number:
 12 - 25 walls (also 29)
 26 - gate, side, closed
 27 - gate/wall tile, closed
-28 - gate/wall, open (replace side gate with a main floor tile (27) ) 
+28 - gate/wall, open (replace side gate with a main floor tile (32) ) 
 29 - corner wall
-30 - forward facing gate left closed (replace with floor tile 26)
-31 - forward facing gate right closed (replace with floor tile 26)
+30 - forward facing gate left closed (replace with floor tile 32)
+31 - forward facing gate right closed (replace with floor tile 32)
 
-26 - main floor tile
-27+ - floors and window tiles
+32 - main floor tile
+32+ - floors and window tiles
 
-42 - last tile for now
+55 - last tile for now
