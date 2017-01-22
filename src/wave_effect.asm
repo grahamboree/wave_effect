@@ -187,14 +187,19 @@ start:
 	ld		l, 0			; put everything to zero
 	call 	FillMemory		; Unused sprites remain off-screen
 	
-	; create sprites
-
-	ld a, 20
+	; Position screen rect
+	ld	a, 0
+	ld	[rSCY], a
+	ld	a, 32
+	ld	[rSCX], a
+	
+	; Position player at a resonable start location.
+	ld a, 60
 	ld [playerLightYPixel], a
-
-	ld a, 20
+	ld a, 60
 	ld [playerLightXPixel], a
-
+	
+	; create player sprite
 	ld a, [playerLightYPixel]
 	ld [_SPR0_Y], a
 	ld a, [playerLightXPixel]
