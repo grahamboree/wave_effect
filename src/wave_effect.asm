@@ -260,9 +260,13 @@ start:
 	ld a, 0
 	ld [backgroundDrawDirection], a
 	
-	call UsePadAB
-	call Movement
-	call AnimatePlayer
+	call 	UsePadAB
+	call 	CollidePlayer
+	jr		nz, .NoMove
+	call 	Movement
+	call 	AnimatePlayer
+.NoMove:	
+
 
 .wait: ; wait for VBLANK
 	ld	a, [rLY]	; check scanline
@@ -397,6 +401,172 @@ start:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Subroutines here:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+CollidePlayer:
+	call GetFuturePlayerTileXY
+	; d has tile y offset
+	; e has tile x offset
+
+	ld		h, d
+	ld		l, e
+	call 	GetCollision
+	cp		0
+	jr		nz, .Collision
+	;ld		[hl], 4			; change to button
+
+	ld		h, d
+	ld		l, e
+	dec		l
+	call 	GetCollision
+	cp		0
+	jr		nz, .Collision
+
+
+	ld		h, d
+	ld		l, e
+	dec		h
+	call 	GetCollision
+	cp		0
+	jr		nz, .Collision
+
+	ld		h, d
+	ld		l, e
+	dec		h
+	dec		l
+	call 	GetCollision
+	cp		0
+	jr		nz, .Collision
+
+.NoCollision
+	ret
+
+.Collision
+	ret
+
+
+; d has tile y offset
+; e has tile x offset
+GetFuturePlayerTileXY:
+	ld		hl, 0
+	ld		de, 0
+	ld		a, [playerLightXPixel]	; find sprite position
+	ld		e, a
+	ld 		a, [rSCX]
+	ld		l, a
+	add		hl, de
+	;hl has the background pixel offset
+
+
+	ld		a, [padInput]
+	and		_PAD_RIGHT
+	jr		nz, .TestLeft
+	dec		hl
+.TestLeft:	
+	and		_PAD_LEFT
+	jr		nz, .XTestDone
+	inc		hl
+.XTestDone:	
+
+	; divide de by 8
+	ccf
+	rrc 	h
+	rr		l
+	rrc 	h
+	rr		l
+	rrc 	h
+	rr		l
+
+	ld		e, l					; e has x tile 
+
+	ld		hl, 0
+	ld		bc, 0
+	ld		a, [playerLightYPixel]	; find sprite position
+	ld		c, a
+	ld 		a, [rSCY]
+	ld		l, a
+	add		hl, bc
+
+	ld		a, [padInput]
+	and		_PAD_UP
+	jr		nz, .TestDown
+	dec		hl
+.TestDown:	
+	and		_PAD_DOWN
+	jr		nz, .YTestDone
+	inc		hl
+.YTestDone:	
+
+	; divide hl by 8
+	ccf
+	rrc 	h
+	rr		l
+
+	rrc 	h
+	rr		l
+
+	rrc 	h
+	rr		l
+
+	ld		a, l
+	sub		1		; sub 1 because our sprite is only 8 bits tall
+	ld		d, a
+
+
+; returns 1 or 0 on a corresponding to whether the player collides with this cell or not
+; h = y tile offset
+; l = x tile offset
+GetCollision:
+	call 	GetTileMapOffset
+	ld		a, [hl]
+	call	CollidesWith
+	ret
+
+; a = tile type
+; returns 1 on a if it does, otherwise sets a to 0
+CollidesWith:
+	ld		a, 0
+
+	; determine if we collide with this type of tile
+	cp		8
+	jr		z, .Collides
+	cp		10
+	jr		z, .Collides
+
+	; 11-26
+	cp 		11
+	jp		c, .NoCollision		; no collision if it's less than 11
+
+	cp 		26
+	jp		c, .Collides		; collision if less than 26
+
+.NoCollision:
+	ret
+
+.Collides:
+	ld		a, 1
+	ret
+
+; computes the memory offset of the tile into the bg tile map and returns it in hl
+; h = tile y
+; l = tile x
+GetTileMapOffset;
+	ld		b, h
+	ld		c, 0
+
+	; shift bc 3 right
+	srl		b
+	rr		c
+	srl		b
+	rr		c
+	srl		b
+	rr		c
+
+	ld		h, 0
+	add		hl, bc		; hl now contains the relative offset of the tile in the tile map
+
+	ld		bc, _SCRN0
+	add		hl, bc		; hl is now the absolute address to the background tile data.
+	ret
 
 RenderPlayer:
 	ld hl, playerLightYPixel
