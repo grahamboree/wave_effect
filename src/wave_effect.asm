@@ -109,6 +109,8 @@ _RAM_BLOCK_5 EQU	_RAM_BLOCK_4+128
 _RAM_BLOCK_6 EQU	_RAM_BLOCK_5+128
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _RAM_BLOCK_7 EQU	_RAM_BLOCK_6+128
+soundPlayed EQU _RAM_BLOCK_7+1
+soundToggle EQU	_RAM_BLOCK_7+2
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
@@ -154,6 +156,11 @@ start:
 	;ld	a, %11010000	; for Mario
 	;ld	a, %11100100
 	ld	[rOBP1], a		; into location 1
+	
+	;sound variables
+	ld a, 0
+	ld [soundPlayed], a	
+    ld [soundToggle], a
 	
 	;scroll variables
 
@@ -249,11 +256,11 @@ start:
 	
 	call 	UsePadAB
 	call 	CollidePlayer
+	
 	jr		nz, .NoMove
 	call 	Movement
 	call 	AnimatePlayer
 .NoMove:	
-
 
 .wait: ; wait for VBLANK
 	ld a, [rSTAT]
@@ -643,6 +650,17 @@ Movement:
 	ld		a, [padInput]	; load status of pad
 	ld		b, a			; Save in b so we can reset easily
 
+	cp 0
+	jr nz, .CheckMovement
+	ret
+	
+.CheckMovement
+	
+	ld 		hl, Sound1
+	call	PlaySound
+	
+	ld 		a, b
+	cp 		a,0
 	and		_PAD_RIGHT
 	call	nz, MoveRight
 	
@@ -1009,6 +1027,76 @@ WorldShift:
 .DoneWorldShift
 	ld a, [hl]
 	ret
+	
+
+PlaySound:
+	ld a, [soundPlayed]
+	cp 0
+	jr z, .Sound
+.SoundDone:
+    ld a, [rAUDENA]
+    and %00000001
+    jp z, .PlaySoundOrRest
+	ret
+	
+.PlaySoundOrRest:	
+    ld a, [soundToggle]
+    cp 0
+    jr z, .Rest
+    
+.Sound:
+	ld a, 1
+	ld [soundPlayed], a
+	
+	ld a, 0
+    ld [soundToggle], a
+	
+    ld a, [hl]
+    ld [rAUD1SWEEP], a
+	inc hl
+	
+    ld a, [hl]
+    ld [rAUD1LEN], a
+	inc hl
+	
+    ld a, [hl]
+    ld [rAUD1ENV], a
+	inc hl
+	
+    ld a, [hl]
+    ld [rAUD1LOW], a
+	inc hl
+	
+    ld a, [hl]
+    ld [rAUD1HIGH], a
+    xor a
+	ret
+.Rest:
+	ld a, 1
+    ld [soundToggle], a
+	
+    ld a, %00000000
+    ld [rAUD1SWEEP], a
+	
+    ld a, %10011000
+    ld [rAUD1LEN], a
+	
+    ld a, %00010100
+    ld [rAUD1ENV], a
+	
+    ld a, %11010111
+    ld [rAUD1LOW], a
+	
+    ld a, %11000010
+    ld [rAUD1HIGH], a
+	ret
+
+Sound1:
+	DB %00000000
+    DB %10011000
+    DB %11110100
+    DB %11010111
+    DB %11000010
 
 ; memory copy routine
 ; copy number of bytes from one directory to another
