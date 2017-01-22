@@ -570,13 +570,13 @@ StartScreen:
 UsePadAB:
 	ld	a, [padInput]	; load status of pad
 	and	%0000010	; A button
-	;call	nz, MoveA ; if pressed, call routine move right
-	call	nz, LoadRight
+	call	nz, MoveA ; if pressed, call routine move right
+	;call	nz, LoadRight
 	
 	ld	a, [padInput]
 	and	%00000001	; B button 
-	;call	nz, MoveB ; ; if pressed, call routine move left
-	call	nz, LoadLeft
+	call	nz, MoveB ; ; if pressed, call routine move left
+	;call	nz, LoadLeft
 	
 	ret
 
