@@ -165,8 +165,9 @@ start:
 	ld		de, _SCRN0		; map 0 loaction
 	call	CopyTileMap
 
+
 	; copy	window tile map
-	ld	hl, WindowStart
+	ld	hl, WINDOW_START
 	ld	de, _SCRN1		; map 1 location
 	ld	bc, 32*32		; screen size
 	call CopyMemory
@@ -197,14 +198,6 @@ start:
 	ld a, 31
 	ld [backgroundLightVramWest], a
 	
-	; copy	window tile map
-	ld	hl, WindowStart
-	ld	de, _SCRN1		; map 1 location
-	ld	bc, 20*18		; screen size
-	call CopyMemory
-	
-	ld	a, 0			; load start screen toggle value
-	ld	[startScreenToggle], a
 	
 	; erase sprite memory
 	ld		de, _OAMRAM		; Sprite attribut memory
@@ -535,7 +528,7 @@ StartScreen:
 	cp	0
 	ret nz
 	
-	ld	a, 8
+	ld	a, 0
 	ld	[rWX], a	; window x location
 	
 	ld	a, 0
@@ -814,6 +807,7 @@ INCLUDE "maintiles.z80"
 EndTiles:
 
 ;screen size 20x17
+Map:
 INCLUDE"mainmap.z80"
 EndMap:
 
