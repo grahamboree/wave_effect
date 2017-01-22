@@ -146,7 +146,7 @@ start:
 	
 	; create another pallete for other sprites
 	;ld	a, %11010000	; for Mario
-	ld	a, %11100100
+	;ld	a, %11100100
 	ld	[rOBP1], a		; into location 1
 	
 	;scroll variables
