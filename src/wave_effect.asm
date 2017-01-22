@@ -110,7 +110,6 @@ _RAM_BLOCK_6 EQU	_RAM_BLOCK_5+128
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _RAM_BLOCK_7 EQU	_RAM_BLOCK_6+128
 soundToggle EQU _RAM_BLOCK_7
-soundPlayed EQU _RAM_BLOCK_7+1
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
@@ -183,12 +182,13 @@ start:
 	
 	; sound
 	ld a, 0
-	ld [soundPlayed], a
 	ld [soundToggle], a
 	
 	;turn on sound
 	ld	a,%10000000
 	ld	[rAUDENA],a
+	
+	call PlaySound
 	
 	ld a, 0
 	ld [currentWorld], a
@@ -253,10 +253,7 @@ start:
 ; GAMEPLAY CODE
 .GameLoop
 	call StartScreen
-	
-	ld hl, Sound1
 	call PlaySound
-	
 	call ReadPad
 	;call EndingScreen
 	;clear backgroundDraw before checking for scroll
@@ -268,7 +265,6 @@ start:
 	jr		nz, .NoMove
 	call 	Movement
 	call 	AnimatePlayer
-	
 .NoMove:	
 
 
@@ -293,7 +289,7 @@ start:
 ; RENDERING CODE
 
 	; Set the sprite x,y
-	call RenderPlayer			;6 + 
+	call RenderPlayer
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;TIME CRITICAL STUFF ENDS HERE
@@ -579,8 +575,8 @@ GetTileMapOffset;
 	ret
 
 RenderPlayer:
-	ld hl, playerLightYPixel					;3
-	call WorldShift								;23 
+	ld hl, playerLightYPixel
+	call WorldShift
 	ld [_SPR0_Y], a
 	ld hl,playerLightXPixel
 	call WorldShift
@@ -1014,82 +1010,50 @@ Delay:
 .EndDelay:
 	ret
 
-;Play the sound stored in hl
 PlaySound:
-	ld a, [soundPlayed]
-	cp 0
-	jr z, .Sound
-.SoundDone:
     ld a, [rAUDENA]
-    and %00000001
-    jp z, .PlaySoundOrRest
-	ret
-	
-.PlaySoundOrRest:	
-    ld a, [soundToggle]
-    cp 0
-    jr z, .Rest
+    and %00000010
+;    jr nz, .EndSoundLoop
+;    ld a, [soundToggle]
+;    cp 0
+;    jr z, .Rest
     
-.Sound:
-	ld a, 1
-	ld [soundPlayed], a
-	
+.Sound
 	ld a, 0
     ld [soundToggle], a
 	
-    ld a, [hl]
-    ld [rAUD1SWEEP], a
-	inc hl
+    ld a, %10000000
+    ld [rAUD2LEN], a
 	
-    ld a, [hl]
-    ld [rAUD1LEN], a
-	inc hl
+    ld a, %11110111
+    ld [rAUD2ENV], a
 	
-    ld a, [hl]
-    ld [rAUD1ENV], a
-	inc hl
+    ld a, %00011110
+    ld [rAUD2LOW], a
 	
-    ld a, [hl]
-    ld [rAUD1LOW], a
-	inc hl
-	
-    ld a, [hl]
-    ld [rAUD1HIGH], a
+    ld a, %10000110
+    ld [rAUD2HIGH], a
     xor a
-	ret
+    jr z, .EndSoundLoop
 .Rest:
 	ld a, 1
     ld [soundToggle], a
-	
-    ld a, %00000000
-    ld [rAUD1SWEEP], a
-	
     ld a, %10000000
-    ld [rAUD1LEN], a
-	
-    ld a, %00010000
-    ld [rAUD1ENV], a
-	
-    ld a, %11010111
-    ld [rAUD1LOW], a
-	
-    ld a, %11000110
-    ld [rAUD1HIGH], a
+    ld [rAUD2LEN], a
+    ld a, %01101010
+    ld [rAUD2ENV], a
+    ld a, %00001010
+.EndSoundLoop
 	ret
-
-Sound1:
-	DB %00000000
-    DB %10000000
-    DB %11110000
-    DB %11010111
-    DB %11000110
 	
-WorldShift:	;14 cycles + 6 for the call
-	ld a, [currentWorld]	;4
-	add a, l				;l
-	ld l, a					;1
-	ld a, [hl]				;4
-	ret						;4
+WorldShift:
+	ld a, [currentWorld]
+	cp a, 0
+	jr z, .DoneWorldShift
+	inc hl
+.DoneWorldShift
+	ld a, [hl]
+	ret
 
 ; memory copy routine
 ; copy number of bytes from one directory to another
