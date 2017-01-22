@@ -56,6 +56,10 @@ _TILE_CHECK_1	EQU	_RAM+7	; store checked tile
 _TILE_CHECK_2	EQU	_RAM+8	; store checked tile 2
 _NODIAG			EQU	_RAM+13	; stop diagonal movement
 
+;sound
+soundToggle EQU _RAM+14
+soundPlayed EQU _RAM+15
+
 ; math variables
 _MD16temp    EQU _RAM+9
 _MD16count   EQU _RAM+10
@@ -205,16 +209,10 @@ init:
 	ld	a, %00110000
 	ld	[_SPR4_ATT], a	; special attribute, pallet 1
 	
-	ld a,0
-	ld [rNR10], a
-	ld a, $80
-	ld [rNR11], a
-	ld a, $F0
-	ld [rNR12], a
-	ld a, $D7
-	ld [rNR13], a
-	ld a, $86
-	ld [rNR14], a
+	;sound hack
+	ld a, 0
+	ld [soundPlayed], a
+	ld [soundToggle], a
 	
 	; configure and activate display
 	ld	a, LCDCF_ON|LCDCF_BG8000|LCDCF_BG9800|LCDCF_BGON|LCDCF_OBJ8|LCDCF_OBJON|LCDCF_WIN9C00
@@ -232,6 +230,8 @@ movement:
 	cp	145	; compare to final scanline
 	jr	nz, .wait	; if not, loop again
 
+	ld hl, Sound1
+	call PlaySound
 	call	move_bird
 	call	anim_bird
 ; Now we move sprite depending on buttons
@@ -1269,7 +1269,84 @@ delay:
 	jr	.slow
 .fin_delay:
 	ret
+	
 
+PlaySound:
+	ld a, [soundPlayed]
+	cp 0
+	jr z, .Sound
+.SoundDone:
+    ld a, [rAUDENA]
+    and %00000001
+    jp z, .PlaySoundOrRest
+	ret
+	
+.PlaySoundOrRest:	
+    ld a, [soundToggle]
+    cp 0
+    jr z, .Rest
+    
+.Sound:
+	ld a, 1
+	ld [soundPlayed], a
+	
+	ld a, 0
+    ld [soundToggle], a
+	
+    ld a, [hl]
+    ld [rAUD1SWEEP], a
+	inc hl
+	
+    ld a, [hl]
+    ld [rAUD1LEN], a
+	inc hl
+	
+    ld a, [hl]
+    ld [rAUD1ENV], a
+	inc hl
+	
+    ld a, [hl]
+    ld [rAUD1LOW], a
+	inc hl
+	
+    ld a, [hl]
+    ld [rAUD1HIGH], a
+    xor a
+	ret
+.Rest:
+	ld a, 1
+    ld [soundToggle], a
+	
+    ld a, %00000000
+    ld [rAUD1SWEEP], a
+	
+    ld a, %10000000
+    ld [rAUD1LEN], a
+	
+    ld a, %00010000
+    ld [rAUD1ENV], a
+	
+    ld a, %11010111
+    ld [rAUD1LOW], a
+	
+    ld a, %11000110
+    ld [rAUD1HIGH], a
+	ret
+
+Sound1:
+	DB %00000000
+    DB %10000000
+    DB %11110000
+    DB %11010111
+    DB %11000110
+	
+Sound2:
+	DB %00000000
+    DB %10000000
+    DB %11110000
+    DB %11010111
+    DB %11000110
+	
 ; memory copy routine
 ; copy number of bytes from one directory to another
 ; expects parameters:
