@@ -447,15 +447,16 @@ CollidePlayer:
 ; d has tile y offset
 ; e has tile x offset
 GetFuturePlayerTileXY:
-	ld		hl, 0
+	ld		hl, playerLightXPixel	; find sprite position
+	call WorldShift
 	ld		de, 0
-	ld		a, [playerLightXPixel]	; find sprite position
 	ld		e, a
-	ld 		a, [rSCX]
+	ld 		hl, lightScrollX
+	call WorldShift
+	ld		h, 0
 	ld		l, a
 	add		hl, de
 	;hl has the background pixel offset
-
 
 	ld		a, [padInput]
 	and		_PAD_RIGHT
@@ -478,11 +479,16 @@ GetFuturePlayerTileXY:
 
 	ld		e, l					; e has x tile 
 
-	ld		hl, 0
 	ld		bc, 0
-	ld		a, [playerLightYPixel]	; find sprite position
+	ld		hl, playerLightYPixel	; find sprite position
+	call WorldShift
 	ld		c, a
-	ld 		a, [rSCY]
+	ld		a, [currentWorld]
+	cp 0
+	jr z, .LightCollide
+	ld		a, 128
+.LightCollide
+	ld		h, 0
 	ld		l, a
 	add		hl, bc
 
