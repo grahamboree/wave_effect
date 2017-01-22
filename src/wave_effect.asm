@@ -101,6 +101,13 @@ startScreenToggle	EQU	_RAM_BLOCK_2+1
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _RAM_BLOCK_3 EQU	_RAM_BLOCK_2+128
+
+puzzle0switchState		EQU		_RAM_BLOCK_3+0	; State of puzzle0 switch0
+puzzle0switchX			EQU		$0D
+puzzle0switchY			EQU		$16
+puzzle0doorX			EQU		$17
+puzzle0doorY			EQU		$04
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _RAM_BLOCK_4 EQU	_RAM_BLOCK_3+128
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -256,6 +263,7 @@ start:
 	ld [backgroundDrawDirection], a
 	
 	call 	UsePadAB
+	call	UpdateSwitches
 	call 	CollidePlayer
 	
 	jr		nz, .NoMove
@@ -397,6 +405,117 @@ start:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Subroutines here:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+UpdateSwitches:
+	;;;;;; GetDarkPlayerTileXY
+
+	ld		a, [playerDarkXPixel]
+	ld		hl, 0
+	ld		l, a
+
+	ld		a, [darkScrollX]
+	ld		bc, 0
+	ld		c, a
+	add		hl, bc ; l has player absolute x
+	ld		d, h
+	ld		e, l   ; Save player absolute x in de
+
+	ld		a, [playerDarkYPixel]
+	ld		hl, 0
+	ld		l, a
+	ld		bc, 128
+	add		hl, bc ; hl has player absolute y
+
+	; setup parameters for PixelCoordToTileCoord
+	ld		b, h
+	ld		c, l
+	ld		h, d
+	ld		l, e
+
+	; takes a pixel x in hl
+	; takes a pixel y in bc
+	call	PixelCoordToTileCoord
+	; d has tile y offset
+	; e has tile x offset
+
+	;;;;;;;;;;;;;;;;;;;;;
+	; Check if the player is on the button
+
+	; check the y coord
+	ld		a, d
+	cp		puzzle0switchY
+	jr		nz, .NotOnButton
+
+	; check the x coord
+	ld		a, e
+	cp		puzzle0switchX
+	jr		nz, .NotOnButton
+
+.OnButton
+	; swap out button sprite
+	ld		h, puzzle0switchY
+	ld		l, puzzle0switchX
+	call	GetTileMapOffset
+	ld		[hl], 5			; Button pressed tile
+
+	; Swap out door sprite
+	ld		h, puzzle0doorY
+	ld		l, puzzle0doorX
+	call	GetTileMapOffset
+	ld		[hl], 32		; Main floor tile
+	ret
+
+.NotOnButton
+	; TODO swap out button sprite
+	ld		h, puzzle0switchY
+	ld		l, puzzle0switchX
+	call	GetTileMapOffset
+	ld		[hl], 4			; Button not pressed tile
+
+	; Swap out door sprite
+	ld		h, puzzle0doorY
+	ld		l, puzzle0doorX
+	call	GetTileMapOffset
+	ld		[hl], 26		; gate side closed
+	ret
+
+; takes a pixel x in hl
+; takes a pixel y in bc
+; returns:
+; d has tile y offset
+; e has tile x offset
+PixelCoordToTileCoord:
+	;hl has the background x pixel offset
+
+	; divide hl by 8
+	ccf
+	rrc 	h
+	rr		l
+	rrc 	h
+	rr		l
+	rrc 	h
+	rr		l
+
+	ld		e, l	; e has x tile 
+
+	; bc has the background y pixel offset
+
+	; divide bc by 8
+	ccf
+	rrc 	b
+	rr		c
+
+	rrc 	b
+	rr		c
+
+	rrc 	b
+	rr		c
+
+	dec		c		; sub 1 because our sprite is only 8 bits tall
+
+	ld		d, c
+	ret
+
 
 CollidePlayer:
 	call GetFuturePlayerTileXY
