@@ -433,7 +433,7 @@ MoveA:
 ;	jp z, .IncBgLight
 	
 	; move screen to bottom of map
-	ld	a, 145
+	ld	a, 128
 	ld	[rSCY], a	; set scroll y value to 145
 	
 	
