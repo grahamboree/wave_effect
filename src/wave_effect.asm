@@ -308,17 +308,22 @@ start:
 	
 	;load the background map into bc
 	ld bc, MAIN_MAP
+	ld de, _SCRN0
 	
 	;offset the index into Bg source if we are in dark world
 	ld a, [currentWorld]
-	jr nz, .DrawBg
+	cp 0
+	jr z, .DrawBg
 	
 	ld a, b			;1 ;dark world offset
-	add 16			;2
+	add 8			;2
 	ld b, a			;1
 	
+	ld a, d			
+	add 2
+	ld d, a
+	
 .DrawBg:
-	ld de, _SCRN0
 	;check which direction we are drawing
 	ld a, [backgroundDrawDirection]
 	cp _EAST
