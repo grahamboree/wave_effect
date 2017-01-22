@@ -10,7 +10,7 @@
 ;   Compression          : None.
 ;   Counter              : None.
 ;   Tile size            : 8 x 8
-;   Tiles                : 0 to 42
+;   Tiles                : 0 to 44
 ;
 ;   Palette colors       : None.
 ;   SGB Palette          : None.
@@ -36,10 +36,10 @@ DB $3C,$00,$7E,$00,$7E,$00,$BD,$42
 DB $81,$7E,$C3,$7E,$FF,$BD,$7E,$00
 DB $00,$00,$3C,$00,$7E,$00,$FF,$00
 DB $BD,$42,$C3,$7E,$FF,$BD,$7E,$00
-DB $00,$42,$5A,$7E,$7E,$5A,$7E,$7E
-DB $7E,$66,$3C,$3C,$7E,$FF,$81,$81
-DB $00,$42,$5A,$7E,$7E,$5A,$7E,$7E
-DB $7E,$66,$7E,$FF,$BD,$BD,$00,$00
+DB $C3,$C3,$81,$81,$81,$81,$A5,$A5
+DB $81,$81,$C3,$C3,$FF,$FF,$FF,$FF
+DB $FF,$FF,$FF,$FF,$C3,$FF,$81,$FF
+DB $A5,$DB,$81,$FF,$81,$FF,$C3,$FF
 DB $FE,$FC,$FE,$F0,$09,$F6,$09,$F6
 DB $09,$F6,$09,$F6,$09,$F6,$0F,$FF
 DB $FE,$FC,$FE,$F0,$0F,$F7,$0F,$F7
@@ -110,5 +110,9 @@ DB $FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF
 DB $FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF
 DB $E7,$E7,$E7,$E7,$E7,$E7,$E7,$E7
 DB $E7,$E7,$E7,$E7,$E7,$E7,$E7,$E7
+DB $FF,$FF,$BD,$BD,$DB,$DB,$E7,$E7
+DB $E7,$E7,$DB,$DB,$BD,$BD,$FF,$FF
+DB $00,$00,$00,$00,$00,$00,$00,$00
+DB $00,$00,$00,$00,$00,$00,$00,$00
 
 ; End of MAINTILES.Z80
