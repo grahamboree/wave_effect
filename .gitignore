@@ -7,3 +7,4 @@ makefile
 src/hello-noise.asm
 inc/standard-defs.inc
 inc/gbhw-snd.inc
+.DS_Store
